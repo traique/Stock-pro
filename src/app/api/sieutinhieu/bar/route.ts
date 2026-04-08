@@ -12,7 +12,8 @@ export async function GET(request: Request) {
   const timeframe = searchParams.get('timeframe') || '1D';
 
   try {
-    const url = `https://sieutinhieu.vn/api/v1/realtime/bar?symbol=\( {symbol}&timeframe= \){timeframe}`;
+    // Đã sửa lại cú pháp nội suy chuỗi ở đây
+    const url = `https://sieutinhieu.vn/api/v1/realtime/bar?symbol=${symbol}&timeframe=${timeframe}`;
 
     const res = await fetch(url, { 
       headers: SIEU_HEADERS,
