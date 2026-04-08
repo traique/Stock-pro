@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, Bell } from 'lucide-react';
+import { TrendingUp, Bell } from 'lucide-react';
 
 interface Signal {
   symbol: string;
@@ -17,30 +17,33 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   const fetchVN30 = async () => {
-    const res = await fetch('/api/sieutinhieu/bar?symbol=VN30');
-    const json = await res.json();
-    if (json.success) setVn30(json.data);
+    try {
+      const res = await fetch('/api/sieutinhieu/bar?symbol=VN30', { 
+        cache: 'no-store',
+        next: { revalidate: 0 }
+      });
+      const json = await res.json();
+      if (json.success) setVn30(json.data);
+    } catch (e) {
+      console.error("VN30 error", e);
+    }
   };
 
   const fetchSignals = async () => {
-    const res = await fetch('/api/sieutinhieu/signals?limit=30&type=BUY');
-    const json = await res.json();
-    if (json.success) {
-      const newSignals = json.data || [];
-      setSignals(newSignals);
-
-      // Gửi Telegram nếu có STRONG BUY
-      newSignals.forEach((s: Signal) => {
-        if (s.signal_type.includes('STRONG')) {
-          fetch('/api/telegram/alert', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(s)
-          });
-        }
+    try {
+      const res = await fetch('/api/sieutinhieu/signals?limit=30&type=BUY', { 
+        cache: 'no-store',
+        next: { revalidate: 0 }
       });
+      const json = await res.json();
+      if (json.success) {
+        setSignals(json.data || []);
+      }
+    } catch (e) {
+      console.error("Signals error", e);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function Dashboard() {
     const interval = setInterval(() => {
       fetchVN30();
       fetchSignals();
-    }, 10000); // refresh mỗi 10 giây
+    }, 10000); // 10 giây refresh 1 lần
 
     return () => clearInterval(interval);
   }, []);
@@ -62,31 +65,35 @@ export default function Dashboard() {
           🚀 Stock Pro <span className="text-green-500 text-3xl">LIVE REALTIME</span>
         </h1>
 
-        {/* VN30 Card */}
+        {/* VN30 */}
         <div className="bg-gray-900 rounded-3xl p-8 mb-8 border border-green-500/30">
           <h2 className="text-2xl mb-4">VN30 Index</h2>
           <div className="text-6xl font-mono font-bold">
             {vn30?.bar?.close?.toFixed(2) || '---'}
           </div>
-          <div className="text-green-500 mt-2">
-            {vn30?.bar?.high} ▲ {vn30?.bar?.low} ▼
-          </div>
         </div>
 
-        {/* Signals Table */}
+        {/* Signals */}
         <div className="bg-gray-900 rounded-3xl p-8">
           <div className="flex justify-between mb-6">
             <h2 className="text-3xl font-bold flex items-center gap-3">
               <Bell className="text-yellow-500" /> Tín hiệu BUY mạnh hôm nay
             </h2>
-            <button onClick={fetchSignals} className="px-6 py-3 bg-green-600 rounded-xl hover:bg-green-700">
+            <button 
+              onClick={() => { fetchVN30(); fetchSignals(); }}
+              className="px-6 py-3 bg-green-600 rounded-xl hover:bg-green-700"
+            >
               Refresh Now
             </button>
           </div>
 
-          {loading ? <p className="text-center py-10">Đang tải dữ liệu realtime từ Siêu Tín Hiệu...</p> : (
+          {loading ? (
+            <p className="text-center py-10">Đang tải dữ liệu realtime từ Siêu Tín Hiệu...</p>
+          ) : signals.length === 0 ? (
+            <p className="text-center py-10 text-gray-400">Chưa có tín hiệu BUY mạnh nào hôm nay</p>
+          ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-700 text-left">
                     <th className="py-4">MÃ CP</th>
@@ -102,11 +109,13 @@ export default function Dashboard() {
                       <td className="py-5 font-mono text-lg font-bold">{s.symbol}</td>
                       <td className="py-5 text-xl">{s.price?.toLocaleString()}</td>
                       <td className="py-5">
-                        <span className={`px-5 py-2 rounded-full text-sm font-bold ${s.signal_type.includes('STRONG') ? 'bg-green-500 text-black' : 'bg-green-600/30 text-green-400'}`}>
+                        <span className="px-5 py-2 rounded-full text-sm font-bold bg-green-500/20 text-green-400">
                           {s.signal_type}
                         </span>
                       </td>
-                      <td className="py-5 text-right font-mono">{(s.trading_value / 1_000_000_000).toFixed(1)} tỷ</td>
+                      <td className="py-5 text-right font-mono">
+                        {(s.trading_value / 1_000_000_000).toFixed(1)} tỷ
+                      </td>
                       <td className="py-5 text-right text-gray-400 text-sm">
                         {new Date(s.detected_at).toLocaleTimeString('vi-VN')}
                       </td>
@@ -120,4 +129,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-        }
+}
