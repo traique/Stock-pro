@@ -9,10 +9,12 @@ const SIEU_HEADERS = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = searchParams.get('limit') || '30';
-  const signalType = searchParams.get('type') || 'BUY';
+  // Đảm bảo loại tín hiệu cũng in hoa nếu API gốc cần vậy (ví dụ 'buy' thành 'BUY')
+  const signalType = (searchParams.get('type') || 'BUY').toUpperCase();
 
   try {
-    const url = `https://sieutinhieu.vn/api/v1/realtime-signals/live-signals/today-trend-changes?limit=\( {limit}&signal_type= \){signalType}&include_all_today=false&sort_by=trading_value`;
+    // SỬA TẠI ĐÂY: Dùng ${limit} và ${signalType}
+    const url = `https://sieutinhieu.vn/api/v1/realtime-signals/live-signals/today-trend-changes?limit=${limit}&signal_type=${signalType}&include_all_today=false&sort_by=trading_value`;
 
     const res = await fetch(url, { 
       headers: SIEU_HEADERS,
@@ -32,4 +34,4 @@ export async function GET(request: Request) {
       error: "Failed to fetch signals" 
     }, { status: 500 });
   }
-      }
+}
