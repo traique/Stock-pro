@@ -1,8 +1,30 @@
-"devDependencies": {
+{
+  "name": "stock-pro",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.49.1",
+    "next": "15.2.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "lucide-react": "^0.469.0",
+    "recharts": "^2.15.0",
+    "date-fns": "^4.1.0"
+  },
+  "devDependencies": {
     "@types/node": "^22",
     "@types/react": "^19",
     "typescript": "^5.8.2",
     "postcss": "^8",
     "tailwindcss": "^4.0.0",
     "autoprefixer": "^10.4.20"
+  }
 }
