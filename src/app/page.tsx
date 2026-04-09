@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, Home as HomeIcon, Search, Sun, Moon } from 'lucide-react';
+import { Bell, Home as HomeIcon, Search, FolderKanban, Sun, Moon } from 'lucide-react';
 import Link from 'next/link';
 
 interface Signal {
@@ -47,7 +47,7 @@ export default function Home() {
 
   return (
     <div className="bento-container">
-      {/* Header */}
+      {/* --- HEADER & MENU --- */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '40px' }}>
         <h1 style={{ fontSize: '40px' }}>
           Stock Pro<span style={{ color: 'var(--accent-red)', fontStyle: 'italic', marginLeft: '8px' }}>Live.</span>
@@ -57,15 +57,16 @@ export default function Home() {
           <div className="nav-menu" style={{ marginBottom: 0 }}>
             <Link href="/" className="nav-link active"><HomeIcon size={16} /> Tín hiệu</Link>
             <Link href="/dashboard" className="nav-link"><Search size={16} /> Phân tích</Link>
+            {/* Đã thêm Tab Danh mục vào Trang chủ */}
+            <Link href="/portfolio" className="nav-link"><FolderKanban size={16} /> Danh mục</Link>
           </div>
-          {/* Nút đổi Theme */}
           <button onClick={toggleTheme} className="theme-toggle" aria-label="Toggle Theme">
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </button>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* --- NỘI DUNG TÍN HIỆU --- */}
       <div className="bento-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <h2 style={{ fontSize: '22px', display: 'flex', alignItems: 'center', gap: '10px' }}>
