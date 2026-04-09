@@ -1,3 +1,4 @@
+// src/app/api/sieutinhieu/performance/route.ts
 import { NextResponse } from 'next/server';
 
 const SIEU_HEADERS = {
@@ -12,8 +13,9 @@ export async function GET(request: Request) {
   const symbol = (searchParams.get('symbol') || 'HPG').toUpperCase();
 
   try {
-    // Gọi thẳng vào API performance của sieutinhieu
-    const url = `https://sieutinhieu.vn/api/v1/signals/performance?symbol=${symbol}&timeframe=1D&limit=5000`;
+    // Gọi thẳng vào API performance của sieutinhieu với các tham số bạn cung cấp
+    // Chú ý: tham số 'start' bạn nên lấy động, ở đây tôi tạm dùng giá trị từ link của bạn
+    const url = `https://sieutinhieu.vn/api/v1/signals/performance?symbol=${symbol}&timeframe=1D&limit=5000&start=1712676508`;
 
     const res = await fetch(url, { 
       headers: SIEU_HEADERS,
