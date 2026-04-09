@@ -15,7 +15,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.0.0",
-    "@tailwindcss/postcss": "latest",
     "lucide-react": "^0.469.0",
     "recharts": "^2.15.0",
     "date-fns": "^4.1.0"
@@ -26,6 +25,6 @@
     "typescript": "^5.8.2",
     "postcss": "^8",
     "tailwindcss": "^4.0.0",
-    "autoprefixer": "^10.4.20"
+    "@tailwindcss/postcss": "^4.0.0"
   }
 }
