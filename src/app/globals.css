@@ -1,16 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
 
+/* --- THEME SÁNG (MẶC ĐỊNH) --- */
 :root {
-  --bg-color: #F2F2F7; /* Nền xám nhạt kiểu iOS */
+  --bg-color: #F8F9FA;
   --card-bg: #FFFFFF;
-  --text-primary: #1C1C1E;
-  --text-secondary: #8E8E93;
-  --accent-blue: #007AFF;
-  --accent-green: #34C759;
-  --accent-red: #FF3B30;
-  --border-color: rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --text-primary: #111111;
+  --text-secondary: #6B7280;
+  --accent-primary: #000000; /* Nút màu đen quyền lực */
+  --accent-primary-text: #FFFFFF;
+  --accent-green: #10B981;
+  --accent-red: #EF4444;
+  --border-color: #E5E7EB;
+  --shadow-sm: 0 4px 24px rgba(0, 0, 0, 0.03);
+  --nav-bg: rgba(255, 255, 255, 0.7);
+}
+
+/* --- THEME TỐI (DARK MODE) --- */
+[data-theme='dark'] {
+  --bg-color: #09090B;
+  --card-bg: #121214;
+  --text-primary: #F9FAFB;
+  --text-secondary: #9CA3AF;
+  --accent-primary: #FFFFFF; /* Nút màu trắng trong nền tối */
+  --accent-primary-text: #000000;
+  --accent-green: #10B981;
+  --accent-red: #EF4444;
+  --border-color: #27272A;
+  --shadow-sm: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --nav-bg: rgba(18, 18, 20, 0.7);
 }
 
 * {
@@ -20,71 +37,68 @@
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-primary);
-  line-height: 1.5;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s ease, color 0.4s ease; /* Hiệu ứng chuyển theme mượt */
 }
 
+/* Tiêu đề dùng font Serif sang trọng */
 h1, h2, h3 {
-  font-family: 'Playfair Display', serif; /* Font Serif sang trọng cho tiêu đề */
+  font-family: 'Playfair Display', serif;
   color: var(--text-primary);
+  letter-spacing: -0.5px;
 }
 
-/* Các class tiện ích chung */
 .bento-container {
-  max-w-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 32px 16px;
 }
 
 .bento-card {
   background: var(--card-bg);
-  border-radius: 24px; /* Bo góc cực lớn kiểu iOS */
-  padding: 24px;
+  border-radius: 16px;
+  padding: 28px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.bento-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
 }
 
 .badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
-.badge.buy { background: rgba(52, 199, 89, 0.15); color: var(--accent-green); }
-.badge.sell { background: rgba(255, 59, 48, 0.15); color: var(--accent-red); }
+.badge.buy { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.2); }
+.badge.sell { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.2); }
 
-/* Navigation Menu */
+/* Navigation */
 .nav-menu {
   display: flex;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 8px;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.8);
-  margin-bottom: 32px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  gap: 8px;
+  background: var(--nav-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
 }
 
 .nav-link {
   text-decoration: none;
   color: var(--text-secondary);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   padding: 10px 20px;
-  border-radius: 14px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -93,36 +107,51 @@ h1, h2, h3 {
 
 .nav-link:hover { color: var(--text-primary); }
 .nav-link.active {
-  background: var(--card-bg);
-  color: var(--accent-blue);
-  box-shadow: var(--shadow-sm);
+  background: var(--text-primary);
+  color: var(--bg-color);
 }
 
-/* Nút bấm và Input */
-.ios-input {
+/* Inputs & Buttons */
+.editorial-input {
   width: 100%;
-  padding: 16px 20px 16px 48px;
-  border-radius: 18px;
+  padding: 18px 24px 18px 52px;
+  border-radius: 12px;
   border: 1px solid var(--border-color);
   background: var(--card-bg);
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
   color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
   outline: none;
+  transition: border-color 0.2s;
 }
-.ios-input:focus { border-color: var(--accent-blue); }
+.editorial-input:focus { border-color: var(--text-primary); }
 
-.ios-btn {
-  background: var(--accent-blue);
-  color: white;
+.editorial-btn {
+  background: var(--accent-primary);
+  color: var(--accent-primary-text);
   border: none;
-  padding: 12px 24px;
-  border-radius: 14px;
-  font-size: 15px;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
-  transition: opacity 0.2s;
+  transition: transform 0.2s, opacity 0.2s;
+  font-family: 'Inter', sans-serif;
 }
-.ios-btn:active { opacity: 0.7; }
+.editorial-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+
+/* Nút đổi theme */
+.theme-toggle {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.theme-toggle:hover { background: var(--border-color); }
