@@ -1,3 +1,4 @@
+// src/app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css';
 
@@ -16,7 +17,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body className="bg-gray-950 text-white">
+      {/* Đã xóa bg-gray-950 và text-white để tránh xung đột giao diện */}
+      <body className="antialiased">
         {children}
       </body>
     </html>
