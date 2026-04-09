@@ -18,18 +18,11 @@ export default function Home() {
 
   const fetchSignals = async () => {
     try {
-      const res = await fetch('/api/sieutinhieu/signals?limit=30&type=BUY', { 
-        cache: 'no-store'
-      });
+      const res = await fetch('/api/sieutinhieu/signals?limit=30&type=BUY', { cache: 'no-store' });
       const json = await res.json();
-      
-      if (json.success && json.data && json.data.signals) {
-        setSignals(json.data.signals);
-      } else {
-        setSignals([]);
-      }
+      if (json.success && json.data?.signals) setSignals(json.data.signals);
     } catch (e) {
-      console.error("Signals error", e);
+      console.error(e);
     } finally {
       setLoading(false);
     }
@@ -37,97 +30,65 @@ export default function Home() {
 
   useEffect(() => {
     fetchSignals();
-
-    const interval = setInterval(() => {
-      fetchSignals();
-    }, 10000);
-
+    const interval = setInterval(fetchSignals, 10000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="bento-container">
+      {/* Header & Menu */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+        <h1 style={{ fontSize: '36px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          🚀 Stock Pro <span style={{ color: 'var(--accent-red)', fontSize: '24px' }}>LIVE</span>
+        </h1>
         
-        {/* Header & Navigation */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
-          <h1 className="text-5xl font-bold flex items-center gap-4">
-            🚀 Stock Pro <span className="text-green-500 text-3xl">LIVE</span>
-          </h1>
-          
-          {/* Navigation Menu (Active: Home) */}
-          <div className="flex items-center gap-3 bg-gray-900 p-2 rounded-2xl border border-gray-800">
-            <Link 
-              href="/" 
-              className="flex items-center gap-2 px-5 py-2.5 bg-gray-800 text-white rounded-xl font-semibold shadow-sm transition"
-            >
-              <HomeIcon size={18} /> Home
-            </Link>
-            <Link 
-              href="/dashboard" 
-              className="flex items-center gap-2 px-5 py-2.5 hover:bg-gray-800 text-gray-400 hover:text-white rounded-xl font-semibold transition"
-            >
-              <Search size={18} /> Tra cứu CP
-            </Link>
-          </div>
+        <div className="nav-menu">
+          <Link href="/" className="nav-link active"><HomeIcon size={18} /> Tín hiệu Live</Link>
+          <Link href="/dashboard" className="nav-link"><Search size={18} /> Phân tích</Link>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bento-card" style={{ marginTop: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Bell color="#FF9500" /> Tín hiệu BUY mạnh
+          </h2>
+          <button className="ios-btn" onClick={fetchSignals}>Cập nhật</button>
         </div>
 
-        {/* Signals Section */}
-        <div className="bg-gray-900 rounded-3xl p-8 shadow-xl border border-gray-800/50">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold flex items-center gap-3">
-              <Bell className="text-yellow-500" /> Tín hiệu BUY mạnh hôm nay
-            </h2>
-            <button 
-              onClick={fetchSignals}
-              className="px-6 py-3 bg-green-600 rounded-xl hover:bg-green-700 transition font-semibold"
-            >
-              Refresh Now
-            </button>
-          </div>
-
-          {loading ? (
-            <p className="text-center py-10">Đang tải dữ liệu realtime từ Siêu Tín Hiệu...</p>
-          ) : signals.length === 0 ? (
-            <p className="text-center py-10 text-gray-400">Không tìm thấy tín hiệu BUY nào hôm nay hoặc API bị lỗi.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-700 text-left">
-                    <th className="py-4">MÃ CP</th>
-                    <th>GIÁ</th>
-                    <th>SIGNAL</th>
-                    <th className="text-right">GIÁ TRỊ GD</th>
-                    <th className="text-right">THỜI GIAN</th>
+        {loading ? (
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px' }}>Đang tải dữ liệu realtime...</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                  <th style={{ padding: '16px 8px' }}>MÃ CP</th>
+                  <th style={{ padding: '16px 8px' }}>GIÁ VÀO</th>
+                  <th style={{ padding: '16px 8px' }}>TRẠNG THÁI</th>
+                  <th style={{ padding: '16px 8px', textAlign: 'right' }}>GIÁ TRỊ GD</th>
+                  <th style={{ padding: '16px 8px', textAlign: 'right' }}>THỜI GIAN</th>
+                </tr>
+              </thead>
+              <tbody>
+                {signals.map((s, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '20px 8px', fontSize: '18px', fontWeight: '700' }}>{s.symbol}</td>
+                    <td style={{ padding: '20px 8px', fontSize: '16px', fontWeight: '500' }}>{s.price?.toLocaleString('vi-VN')}</td>
+                    <td style={{ padding: '20px 8px' }}><span className="badge buy">{s.signal_type}</span></td>
+                    <td style={{ padding: '20px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: '15px' }}>
+                      {(s.trading_value / 1_000_000_000).toFixed(1)} tỷ
+                    </td>
+                    <td style={{ padding: '20px 8px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                      {s.trend_change_detected_at ? new Date(s.trend_change_detected_at).toLocaleTimeString('vi-VN') : '---'}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {signals.map((s, i) => (
-                    <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
-                      <td className="py-5 font-mono text-lg font-bold">{s.symbol}</td>
-                      <td className="py-5 text-xl">{s.price?.toLocaleString('vi-VN')}</td>
-                      <td className="py-5">
-                        <span className="px-5 py-2 rounded-full text-sm font-bold bg-green-500/20 text-green-400">
-                          {s.signal_type}
-                        </span>
-                      </td>
-                      <td className="py-5 text-right font-mono">
-                        {(s.trading_value / 1_000_000_000).toFixed(1)} tỷ
-                      </td>
-                      <td className="py-5 text-right text-gray-400 text-sm">
-                        {s.trend_change_detected_at 
-                          ? new Date(s.trend_change_detected_at).toLocaleTimeString('vi-VN') 
-                          : '---'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
