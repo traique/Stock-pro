@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Search, ArrowUpRight, ArrowDownRight, Home as HomeIcon, ListOrdered, Sun, Moon, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
 
-// Hàm siêu việt: Gọi API có tích hợp tự động ngắt kết nối (Chống treo)
+// Hàm siêu việt: Gọi API có tích hợp tự động ngắt kết nối (Chống treo vòng lặp)
 const fetchWithTimeout = async (url: string, timeout = 5000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -24,8 +24,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [theme, setTheme] = useState('light');
-  
-  const [tvExchange, setTvExchange] = useState('HOSE');
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -49,26 +47,11 @@ export default function Dashboard() {
     try {
       const symbol = symbolInput.toUpperCase();
 
-      // 1. Gọi API lấy dữ liệu hiệu suất (Chờ tối đa 8 giây)
+      // Gọi API lấy dữ liệu hiệu suất (Chờ tối đa 8 giây)
       const resPerf = await fetchWithTimeout(`/api/sieutinhieu/performance?symbol=${symbol}`, 8000);
       const jsonPerf = await resPerf.json();
 
-      // 2. Dò Sàn giao dịch (Chờ tối đa 3 giây, nếu Firefox chặn CORS sẽ tự động bỏ qua)
-      try {
-        const resExchange = await fetchWithTimeout(`https://finfo-api.vndirect.com.vn/v4/stocks?q=code:${symbol}`, 3000);
-        const jsonExchange = await resExchange.json();
-        
-        if (jsonExchange?.data?.length > 0) {
-          setTvExchange(jsonExchange.data[0].floor.toUpperCase());
-        } else {
-          setTvExchange('HOSE');
-        }
-      } catch (err) {
-        console.warn('Bị chặn API hoặc quá thời gian dò sàn. Đã dùng mặc định HOSE.');
-        setTvExchange('HOSE');
-      }
-
-      // 3. Cập nhật giao diện
+      // Cập nhật giao diện
       if (jsonPerf.success && jsonPerf.data) {
         setPerformanceData(jsonPerf.data);
       } else {
@@ -76,7 +59,7 @@ export default function Dashboard() {
       }
     } catch (err: any) { 
       if (err.name === 'AbortError') {
-        setError('Hệ thống máy chủ phản hồi quá lâu. Vui lòng thử lại.');
+        setError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.');
       } else {
         setError('Lỗi kết nối mạng hoặc máy chủ từ chối.');
       }
@@ -166,17 +149,17 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* KHỐI 2: BIỂU ĐỒ TRADINGVIEW TỰ ĐỘNG SÀN */}
-          <div className="bento-card" style={{ padding: '0', overflow: 'hidden', height: '550px', display: 'flex', flexDirection: 'column' }}>
+          {/* KHỐI 2: BIỂU ĐỒ VNDIRECT (KHÔNG BỊ CHẶN, ĐẦY ĐỦ CÔNG CỤ TRADINGVIEW) */}
+          <div className="bento-card" style={{ padding: '0', overflow: 'hidden', height: '600px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-color)' }}>
               <BarChart2 size={20} color="var(--text-secondary)" /> 
-              <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Biểu đồ Kỹ thuật ({performanceData.symbol} - Sàn: {tvExchange})</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Biểu đồ Kỹ thuật ({performanceData.symbol})</h3>
             </div>
             <div style={{ flex: 1, position: 'relative' }}>
               <iframe 
-                src={`https://s.tradingview.com/widgetembed/?symbol=${tvExchange}:${performanceData.symbol}&interval=D&theme=${theme}&style=1&timezone=Asia%2FHo_Chi_Minh&locale=vi_VN&studies=Volume%40tv-basicstudies`} 
+                src={`https://dchart.vndirect.com.vn/?symbol=${performanceData.symbol}`} 
                 style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }}
-                title={`Biểu đồ TradingView ${performanceData.symbol}`}
+                title={`Biểu đồ Phân tích ${performanceData.symbol}`}
                 allowFullScreen
               />
             </div>
