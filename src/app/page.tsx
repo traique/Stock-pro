@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ArrowUpRight, ArrowDownRight, Home as HomeIcon, ListOrdered, Sun, Moon, Bell } from 'lucide-react';
+import { Search, ArrowUpRight, ArrowDownRight, Home as HomeIcon, ListOrdered, Sun, Moon, Bell, Activity } from 'lucide-react';
 
 interface Signal {
   symbol: string;
@@ -40,7 +40,7 @@ export default function App() {
   const [perfLoading, setPerfLoading] = useState(false);
   const [perfError, setPerfError] = useState('');
 
-  // 1. Xử lý Theme (Giao diện)
+  // 1. Xử lý Theme Sáng/Tối
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
     setTheme(savedTheme);
@@ -69,20 +69,18 @@ export default function App() {
 
   useEffect(() => {
     fetchSignals();
-    // Vẫn âm thầm cập nhật tín hiệu mỗi 10s kể cả khi đang xem tab Phân tích
     const interval = setInterval(fetchSignals, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Logic Tab Phân Tích
-  const fetchPerformance = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!symbolInput) return;
+  // 3. Logic Lấy dữ liệu Phân Tích (Được tách riêng để gọi tự động)
+  const loadAnalyticsData = async (symbolToFetch: string) => {
+    if (!symbolToFetch) return;
     setPerfLoading(true); 
     setPerfError('');
     
     try {
-      const symbol = symbolInput.toUpperCase();
+      const symbol = symbolToFetch.toUpperCase();
       const resPerf = await fetchWithTimeout(`/api/sieutinhieu/performance?symbol=${symbol}`, 8000);
       const jsonPerf = await resPerf.json();
 
@@ -90,6 +88,7 @@ export default function App() {
         setPerformanceData(jsonPerf.data);
       } else {
         setPerfError('Không tìm thấy dữ liệu cho mã này.');
+        setPerformanceData(null);
       }
     } catch (err: any) { 
       if (err.name === 'AbortError') {
@@ -97,9 +96,24 @@ export default function App() {
       } else {
         setPerfError('Lỗi kết nối mạng hoặc máy chủ từ chối.');
       }
+      setPerformanceData(null);
     } finally { 
       setPerfLoading(false); 
     }
+  };
+
+  // Submit từ ô tìm kiếm thủ công
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    loadAnalyticsData(symbolInput);
+  };
+
+  // 4. MỚI: Xử lý khi bấm vào 1 mã cổ phiếu ở Tab Tín Hiệu
+  const handleSymbolClick = (symbol: string) => {
+    setSymbolInput(symbol);            // Cập nhật ô input thành mã vừa bấm
+    setActiveTab('ANALYTICS');         // Nhảy sang tab Phân tích
+    loadAnalyticsData(symbol);         // Tự động kéo dữ liệu phân tích ngay lập tức
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn mượt lên đầu trang
   };
 
   // Helper format ngày tháng
@@ -123,25 +137,46 @@ export default function App() {
         </h1>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* MENU ĐIỀU HƯỚNG BẰNG TAB (KHÔNG DÙNG LINK NỮA) */}
-          <div className="nav-menu" style={{ marginBottom: 0 }}>
+          {/* MENU ĐIỀU HƯỚNG MỚI (Segmented Control - Luôn tương phản) */}
+          <div style={{ 
+            display: 'flex', 
+            background: 'var(--border-color)', 
+            padding: '6px', 
+            borderRadius: '16px',
+            gap: '4px'
+          }}>
             <button 
               onClick={() => setActiveTab('SIGNAL')} 
-              className={`nav-link ${activeTab === 'SIGNAL' ? 'active' : ''}`}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                background: activeTab === 'SIGNAL' ? 'var(--text-primary)' : 'transparent',
+                color: activeTab === 'SIGNAL' ? 'var(--bg-color)' : 'var(--text-secondary)',
+                fontWeight: activeTab === 'SIGNAL' ? '700' : '500',
+                fontSize: '14px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
             >
-              <HomeIcon size={16} /> Tín hiệu
+              <Activity size={18} /> Tín hiệu
             </button>
             <button 
               onClick={() => setActiveTab('ANALYTICS')} 
-              className={`nav-link ${activeTab === 'ANALYTICS' ? 'active' : ''}`}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                background: activeTab === 'ANALYTICS' ? 'var(--text-primary)' : 'transparent',
+                color: activeTab === 'ANALYTICS' ? 'var(--bg-color)' : 'var(--text-secondary)',
+                fontWeight: activeTab === 'ANALYTICS' ? '700' : '500',
+                fontSize: '14px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
             >
-              <Search size={16} /> Phân tích
+              <Search size={18} /> Phân tích
             </button>
           </div>
-          <button onClick={toggleTheme} className="theme-toggle" aria-label="Toggle Theme">
-            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+
+          <button onClick={toggleTheme} className="theme-toggle" aria-label="Toggle Theme" style={{ padding: '12px', borderRadius: '16px', background: 'var(--border-color)' }}>
+            {theme === 'light' ? <Moon size={20} color="var(--text-primary)" /> : <Sun size={20} color="var(--text-primary)" />}
           </button>
         </div>
       </div>
@@ -149,7 +184,7 @@ export default function App() {
       {/* ========================================= */}
       {/* TAB TÍN HIỆU                */}
       {/* ========================================= */}
-      <div style={{ display: activeTab === 'SIGNAL' ? 'block' : 'none' }}>
+      <div style={{ display: activeTab === 'SIGNAL' ? 'block' : 'none', animation: 'fadeIn 0.3s ease-in-out' }}>
         <div className="bento-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
             <h2 style={{ fontSize: '22px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -165,7 +200,7 @@ export default function App() {
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    <th style={{ padding: '16px 8px' }}>Mã CP</th>
+                    <th style={{ padding: '16px 8px' }}>Mã CP (Bấm để PT)</th>
                     <th style={{ padding: '16px 8px' }}>Giá vào</th>
                     <th style={{ padding: '16px 8px' }}>Tín hiệu</th>
                     <th style={{ padding: '16px 8px', textAlign: 'right' }}>Thanh khoản</th>
@@ -174,9 +209,22 @@ export default function App() {
                 </thead>
                 <tbody>
                   {signals.map((s, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <tr 
+                      key={i} 
+                      onClick={() => handleSymbolClick(s.symbol)}
+                      title={`Phân tích hiệu suất mã ${s.symbol}`}
+                      style={{ 
+                        borderBottom: '1px solid var(--border-color)', 
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,122,255,0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
                       <td style={{ padding: '24px 8px', fontSize: '18px', fontWeight: '700', fontFamily: "'Playfair Display', serif" }}>
-                        {s.symbol}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-blue)' }}>
+                          {s.symbol} <ArrowUpRight size={16} style={{ opacity: 0.6 }} />
+                        </div>
                       </td>
                       <td style={{ padding: '24px 8px', fontSize: '16px', fontWeight: '500' }}>
                         {s.price?.toLocaleString('vi-VN')} đ
@@ -209,8 +257,8 @@ export default function App() {
       {/* ========================================= */}
       {/* TAB PHÂN TÍCH               */}
       {/* ========================================= */}
-      <div style={{ display: activeTab === 'ANALYTICS' ? 'block' : 'none' }}>
-        <form onSubmit={fetchPerformance} style={{ position: 'relative', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>
+      <div style={{ display: activeTab === 'ANALYTICS' ? 'block' : 'none', animation: 'fadeIn 0.3s ease-in-out' }}>
+        <form onSubmit={handleFormSubmit} style={{ position: 'relative', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>
           <Search style={{ position: 'absolute', left: '18px', top: '16px', color: 'var(--text-secondary)' }} size={22} />
           <input 
             type="text" 
@@ -218,8 +266,9 @@ export default function App() {
             value={symbolInput}
             onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
             placeholder="Nhập mã cổ phiếu (VD: SSI, SHS, BSR)..."
+            style={{ borderRadius: '24px', paddingLeft: '50px' }}
           />
-          <button type="submit" className="editorial-btn" style={{ position: 'absolute', right: '8px', top: '8px', bottom: '8px' }}>
+          <button type="submit" className="editorial-btn" style={{ position: 'absolute', right: '8px', top: '8px', bottom: '8px', borderRadius: '16px' }}>
             Tìm kiếm
           </button>
         </form>
@@ -266,41 +315,4 @@ export default function App() {
             <div className="bento-card" style={{ padding: '0', overflow: 'hidden' }}>
               <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-color)' }}>
                 <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}><ListOrdered size={20} color="var(--text-secondary)" /> Lịch sử lệnh ({performanceData.symbol})</h3>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{performanceData.trades?.length || 0} lệnh</span>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
-                  <thead>
-                    <tr style={{ color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Loại</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Ngày vào</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Giá vào</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Ngày ra</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Giá ra</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', textAlign: 'right' }}>Kết quả</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {performanceData.trades?.map((trade: any, idx: number) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                        <td style={{ padding: '20px 24px' }}><span className={`badge ${trade.side === 'BUY' ? 'buy' : 'sell'}`}>{trade.side}</span></td>
-                        <td style={{ padding: '20px 24px', color: 'var(--text-secondary)' }}>{formatDate(trade.entry_ts)}</td>
-                        <td style={{ padding: '20px 24px', fontWeight: '600' }}>{trade.entry_price}</td>
-                        <td style={{ padding: '20px 24px', color: 'var(--text-secondary)' }}>{formatDate(trade.exit_ts)}</td>
-                        <td style={{ padding: '20px 24px', fontWeight: '600' }}>{trade.exit_price || '---'}</td>
-                        <td style={{ padding: '20px 24px', textAlign: 'right', fontWeight: '700', color: trade.pnl_pct > 0 ? 'var(--accent-green)' : trade.pnl_pct < 0 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>
-                          {trade.pnl_pct > 0 ? '+' : ''}{trade.pnl_pct}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-    </div>
-  );
-}
+                <span style={{ color: 'var(--
