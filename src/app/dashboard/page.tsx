@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ArrowUpRight, ArrowDownRight, Home as HomeIcon, ListOrdered, Sun, Moon } from 'lucide-react';
+import { Search, ArrowUpRight, ArrowDownRight, Home as HomeIcon, ListOrdered, Sun, Moon, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Dashboard() {
@@ -70,7 +70,7 @@ export default function Dashboard() {
           className="editorial-input"
           value={symbolInput}
           onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
-          placeholder="Nhập mã cổ phiếu..."
+          placeholder="Nhập mã cổ phiếu (VD: SSI, HPG)..."
         />
         <button type="submit" className="editorial-btn" style={{ position: 'absolute', right: '8px', top: '8px', bottom: '8px' }}>
           Tìm kiếm
@@ -84,6 +84,7 @@ export default function Dashboard() {
       {performanceData && !loading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
+          {/* KHỐI 1: CHỈ SỐ THỐNG KÊ */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
             <div className="bento-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <h3 style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '20px' }}>Trạng thái hiện tại</h3>
@@ -116,8 +117,25 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* KHỐI 2: BIỂU ĐỒ KỸ THUẬT (NHÚNG SIEUTINHIEU) */}
+          <div className="bento-card" style={{ padding: '0', overflow: 'hidden', height: '600px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-color)' }}>
+              <BarChart2 size={20} color="var(--text-secondary)" /> 
+              <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Biểu đồ Kỹ thuật ({performanceData.symbol})</h3>
+            </div>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <iframe 
+                src={`https://sieutinhieu.vn/chart.html?embed=1&symbol=${performanceData.symbol}`} 
+                style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }}
+                title={`Biểu đồ ${performanceData.symbol}`}
+                allowFullScreen
+              />
+            </div>
+          </div>
+
+          {/* KHỐI 3: LỊCH SỬ LỆNH */}
           <div className="bento-card" style={{ padding: '0', overflow: 'hidden' }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-color)' }}>
               <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}><ListOrdered size={20} color="var(--text-secondary)" /> Lịch sử lệnh ({performanceData.symbol})</h3>
               <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{performanceData.trades?.length || 0} lệnh</span>
             </div>
@@ -150,6 +168,7 @@ export default function Dashboard() {
               </table>
             </div>
           </div>
+
         </div>
       )}
     </div>
