@@ -108,7 +108,7 @@ export default function App() {
     loadAnalyticsData(symbolInput);
   };
 
-  // 4. MỚI: Xử lý khi bấm vào 1 mã cổ phiếu ở Tab Tín Hiệu
+  // 4. Xử lý khi bấm vào 1 mã cổ phiếu ở Tab Tín Hiệu
   const handleSymbolClick = (symbol: string) => {
     setSymbolInput(symbol);            // Cập nhật ô input thành mã vừa bấm
     setActiveTab('ANALYTICS');         // Nhảy sang tab Phân tích
@@ -137,7 +137,7 @@ export default function App() {
         </h1>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* MENU ĐIỀU HƯỚNG MỚI (Segmented Control - Luôn tương phản) */}
+          {/* MENU ĐIỀU HƯỚNG MỚI (Segmented Control) */}
           <div style={{ 
             display: 'flex', 
             background: 'var(--border-color)', 
@@ -315,4 +315,41 @@ export default function App() {
             <div className="bento-card" style={{ padding: '0', overflow: 'hidden' }}>
               <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-color)' }}>
                 <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}><ListOrdered size={20} color="var(--text-secondary)" /> Lịch sử lệnh ({performanceData.symbol})</h3>
-                <span style={{ color: 'var(--
+                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{performanceData.trades?.length || 0} lệnh</span>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
+                  <thead>
+                    <tr style={{ color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Loại</th>
+                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Ngày vào</th>
+                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Giá vào</th>
+                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Ngày ra</th>
+                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Giá ra</th>
+                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', textAlign: 'right' }}>Kết quả</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {performanceData.trades?.map((trade: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '20px 24px' }}><span className={`badge ${trade.side === 'BUY' ? 'buy' : 'sell'}`}>{trade.side}</span></td>
+                        <td style={{ padding: '20px 24px', color: 'var(--text-secondary)' }}>{formatDate(trade.entry_ts)}</td>
+                        <td style={{ padding: '20px 24px', fontWeight: '600' }}>{trade.entry_price}</td>
+                        <td style={{ padding: '20px 24px', color: 'var(--text-secondary)' }}>{formatDate(trade.exit_ts)}</td>
+                        <td style={{ padding: '20px 24px', fontWeight: '600' }}>{trade.exit_price || '---'}</td>
+                        <td style={{ padding: '20px 24px', textAlign: 'right', fontWeight: '700', color: trade.pnl_pct > 0 ? 'var(--accent-green)' : trade.pnl_pct < 0 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>
+                          {trade.pnl_pct > 0 ? '+' : ''}{trade.pnl_pct}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}
