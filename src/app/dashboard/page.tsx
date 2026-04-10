@@ -4,6 +4,20 @@ import { useState, useEffect } from 'react';
 import { Search, ArrowUpRight, ArrowDownRight, Home as HomeIcon, ListOrdered, Sun, Moon, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
 
+// Hàm siêu việt: Gọi API có tích hợp tự động ngắt kết nối (Chống treo)
+const fetchWithTimeout = async (url: string, timeout = 5000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    return res;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+};
+
 export default function Dashboard() {
   const [symbolInput, setSymbolInput] = useState('SSI');
   const [performanceData, setPerformanceData] = useState<any>(null);
@@ -11,7 +25,6 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [theme, setTheme] = useState('light');
   
-  // State mới để lưu tên Sàn giao dịch (Tự động nhận diện)
   const [tvExchange, setTvExchange] = useState('HOSE');
 
   useEffect(() => {
@@ -36,35 +49,37 @@ export default function Dashboard() {
     try {
       const symbol = symbolInput.toUpperCase();
 
-      // 1. Gọi API lấy dữ liệu hiệu suất (của Sieutinhieu)
-      const resPerf = await fetch(`/api/sieutinhieu/performance?symbol=${symbol}`);
+      // 1. Gọi API lấy dữ liệu hiệu suất (Chờ tối đa 8 giây)
+      const resPerf = await fetchWithTimeout(`/api/sieutinhieu/performance?symbol=${symbol}`, 8000);
       const jsonPerf = await resPerf.json();
 
-      // 2. [TÍNH NĂNG MỚI] Tự động dò Sàn giao dịch từ API đại chúng của VNDirect
+      // 2. Dò Sàn giao dịch (Chờ tối đa 3 giây, nếu Firefox chặn CORS sẽ tự động bỏ qua)
       try {
-        const resExchange = await fetch(`https://finfo-api.vndirect.com.vn/v4/stocks?q=code:${symbol}`);
+        const resExchange = await fetchWithTimeout(`https://finfo-api.vndirect.com.vn/v4/stocks?q=code:${symbol}`, 3000);
         const jsonExchange = await resExchange.json();
         
-        if (jsonExchange && jsonExchange.data && jsonExchange.data.length > 0) {
-          const floor = jsonExchange.data[0].floor.toUpperCase();
-          // API VNDirect trả về: HOSE, HNX, UPCOM -> khớp 100% với chuẩn của TradingView
-          setTvExchange(floor);
+        if (jsonExchange?.data?.length > 0) {
+          setTvExchange(jsonExchange.data[0].floor.toUpperCase());
         } else {
-          setTvExchange('HOSE'); // Mặc định nếu API VNDirect không tìm thấy
+          setTvExchange('HOSE');
         }
       } catch (err) {
-        console.warn('Không dò được sàn, dùng mặc định HOSE', err);
+        console.warn('Bị chặn API hoặc quá thời gian dò sàn. Đã dùng mặc định HOSE.');
         setTvExchange('HOSE');
       }
 
-      // Cập nhật giao diện
+      // 3. Cập nhật giao diện
       if (jsonPerf.success && jsonPerf.data) {
         setPerformanceData(jsonPerf.data);
       } else {
         setError('Không tìm thấy dữ liệu.');
       }
-    } catch (err) { 
-      setError('Lỗi kết nối API.'); 
+    } catch (err: any) { 
+      if (err.name === 'AbortError') {
+        setError('Hệ thống máy chủ phản hồi quá lâu. Vui lòng thử lại.');
+      } else {
+        setError('Lỗi kết nối mạng hoặc máy chủ từ chối.');
+      }
     } finally { 
       setLoading(false); 
     }
