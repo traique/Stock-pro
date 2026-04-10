@@ -117,17 +117,17 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* KHỐI 2: BIỂU ĐỒ KỸ THUẬT (NHÚNG SIEUTINHIEU) */}
-          <div className="bento-card" style={{ padding: '0', overflow: 'hidden', height: '600px', display: 'flex', flexDirection: 'column' }}>
+          {/* KHỐI 2: BIỂU ĐỒ TRADINGVIEW CHUYÊN NGHIỆP */}
+          <div className="bento-card" style={{ padding: '0', overflow: 'hidden', height: '550px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-color)' }}>
               <BarChart2 size={20} color="var(--text-secondary)" /> 
               <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Biểu đồ Kỹ thuật ({performanceData.symbol})</h3>
             </div>
             <div style={{ flex: 1, position: 'relative' }}>
               <iframe 
-                src={`https://sieutinhieu.vn/chart.html?embed=1&symbol=${performanceData.symbol}`} 
+                src={`https://s.tradingview.com/widgetembed/?symbol=${performanceData.symbol}&interval=D&theme=${theme}&style=1&timezone=Asia%2FHo_Chi_Minh&locale=vi_VN`} 
                 style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }}
-                title={`Biểu đồ ${performanceData.symbol}`}
+                title={`Biểu đồ TradingView ${performanceData.symbol}`}
                 allowFullScreen
               />
             </div>
