@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import {
   calcCashSummary, calcRealizedSummary, calcSummary,
-  deriveOpenHoldings, enrichTransactions, formatCurrency, groupHoldingsBySymbol,
+  deriveOpenHoldings, enrichTransactions, groupHoldingsBySymbol,
   Transaction, CashTransaction, PortfolioSettings, PriceMap
 } from '@/lib/calculations';
 
@@ -18,12 +18,14 @@ const DEMO_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 type QuoteDebugItem = { symbol: string; price: number; change: number; pct: number };
 
-// Hàm hỗ trợ format số
+// Helper format số
 const formatNumberInput = (value: string) => {
   const number = value.replace(/\D/g, '');
-  return number ? Number(number).toLocaleString('en-US') : '';
+  return number ? Number(number).toLocaleString('vi-VN') : '';
 };
-const parseNumberInput = (value: string) => Number(value.replace(/,/g, ''));
+const parseNumberInput = (value: string) => Number(value.replace(/\./g, ''));
+// Custom format tiền tệ hiển thị chữ "đ" giống ảnh
+const formatVND = (value: number) => new Intl.NumberFormat('vi-VN').format(value) + ' đ';
 
 export default function PortfolioPage() {
   const [theme, setTheme] = useState('light');
@@ -48,7 +50,6 @@ export default function PortfolioPage() {
   const [adjustmentSign, setAdjustmentSign] = useState<1 | -1>(1);
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
 
-  // 1. Khởi tạo & Load Data
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
     setTheme(savedTheme);
@@ -82,9 +83,9 @@ export default function PortfolioPage() {
     setLoading(false);
   };
 
-  // 2. Load Prices (Lấy giá Real-time)
   const openHoldings = useMemo(() => deriveOpenHoldings(transactions), [transactions]);
   
+  // Lấy giá Real-time tự động mỗi 10 giây
   useEffect(() => {
     const fetchPrices = async () => {
       const symbols = [...new Set(openHoldings.map(h => h.symbol.toUpperCase()))];
@@ -93,7 +94,6 @@ export default function PortfolioPage() {
       }
       setRefreshingPrices(true);
       try {
-        // Gọi lại API lấy giá từ dự án cũ của bạn
         const res = await fetch(`/api/prices-cache?symbols=${symbols.join(',')}`, { cache: 'no-store' });
         const data = await res.json();
         if (data.prices) setPrices(data.prices);
@@ -105,10 +105,13 @@ export default function PortfolioPage() {
       }
     };
     
-    if (openHoldings.length > 0) fetchPrices();
+    if (openHoldings.length > 0) {
+      fetchPrices();
+      const interval = setInterval(fetchPrices, 10000); // Polling mỗi 10s
+      return () => clearInterval(interval);
+    }
   }, [openHoldings]);
 
-  // 3. Tính toán Danh mục
   const enrichedTransactions = useMemo(() => enrichTransactions(transactions), [transactions]);
   const positions = useMemo(() => groupHoldingsBySymbol(openHoldings), [openHoldings]);
   const summary = useMemo(() => calcSummary(openHoldings, prices), [openHoldings, prices]);
@@ -128,11 +131,10 @@ export default function PortfolioPage() {
       const currentPrice = prices[pos.symbol] || pos.avgBuyPrice;
       const posTotalNow = currentPrice * pos.quantity;
       const percent = totalNow > 0 ? (posTotalNow / totalNow) * 100 : 0;
-      return { symbol: pos.symbol, totalNow: posTotalNow, percent };
+      return { symbol: pos.symbol, totalBuy: posTotalNow, percent };
     }).sort((a, b) => b.totalNow - a.totalNow);
   }, [positions, prices, marketValue]);
 
-  // 4. Handlers (Thêm/Sửa/Xóa)
   const handleTradeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const price = parseNumberInput(tradeForm.price);
@@ -172,9 +174,8 @@ export default function PortfolioPage() {
     await supabase.from('cash_transactions').delete().eq('id', id).eq('user_id', DEMO_USER_ID); loadPortfolio();
   };
 
-  // Tính năng Xóa nguyên 1 mã cổ phiếu (MỚI)
   const deleteStockPosition = async (symbol: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử giao dịch của mã ${symbol}? Dữ liệu sẽ không thể khôi phục.`)) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử giao dịch của mã ${symbol}?`)) return;
     await supabase.from('transactions').delete().eq('symbol', symbol).eq('user_id', DEMO_USER_ID); loadPortfolio();
   };
 
@@ -201,22 +202,22 @@ export default function PortfolioPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '16px' }}>
             <div className="bento-card">
               <div style={{ color: 'var(--text-secondary)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>Tổng vốn nạp</div>
-              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '8px' }}>{formatCurrency(totalCapital)}</div>
+              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '8px' }}>{formatVND(totalCapital)}</div>
             </div>
             <div className="bento-card" style={{ border: '1px solid var(--accent-blue)' }}>
               <div style={{ color: 'var(--accent-blue)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700' }}>NAV Thực tế (Sức mua)</div>
-              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '8px', color: 'var(--accent-blue)' }}>{formatCurrency(actualNav)}</div>
+              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '8px', color: 'var(--accent-blue)' }}>{formatVND(actualNav)}</div>
             </div>
             <div className="bento-card">
               <div style={{ color: 'var(--text-secondary)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>Giá trị thị trường</div>
               <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '8px' }}>
-                {formatCurrency(marketValue)}
-                {refreshingPrices && <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginLeft: '8px', fontWeight: 'normal' }}>(Đang cập nhật...)</span>}
+                {formatVND(marketValue)}
+                {refreshingPrices && <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginLeft: '8px', fontWeight: 'normal' }}>(Realtime...)</span>}
               </div>
             </div>
             <div className="bento-card" style={{ background: 'var(--text-primary)', color: 'var(--bg-color)' }}>
               <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.8 }}>Tổng tài sản</div>
-              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '8px' }}>{formatCurrency(totalAssets)}</div>
+              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '8px' }}>{formatVND(totalAssets)}</div>
             </div>
           </div>
 
@@ -226,7 +227,7 @@ export default function PortfolioPage() {
               <div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Tổng Lãi / Lỗ</div>
                 <div style={{ fontSize: '28px', fontWeight: '800', color: totalPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', marginTop: '4px' }}>
-                  {totalPnl > 0 ? '+' : ''}{formatCurrency(totalPnl)}
+                  {totalPnl > 0 ? '+' : ''}{formatVND(totalPnl)}
                 </div>
               </div>
               <div style={{ fontSize: '20px', fontWeight: '700', color: totalPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
@@ -237,7 +238,7 @@ export default function PortfolioPage() {
               <div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Lãi / Lỗ đã chốt</div>
                 <div style={{ fontSize: '28px', fontWeight: '800', color: realizedSummary.totalRealizedPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', marginTop: '4px' }}>
-                   {realizedSummary.totalRealizedPnl > 0 ? '+' : ''}{formatCurrency(realizedSummary.totalRealizedPnl)}
+                   {realizedSummary.totalRealizedPnl > 0 ? '+' : ''}{formatVND(realizedSummary.totalRealizedPnl)}
                 </div>
               </div>
               <TrendingDown size={32} color={realizedSummary.totalRealizedPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'} style={{ opacity: 0.3 }} />
@@ -253,7 +254,7 @@ export default function PortfolioPage() {
                   <div key={item.symbol}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                       <span style={{ fontWeight: '800', fontSize: '15px' }}>{item.symbol}</span>
-                      <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{formatCurrency(item.totalNow)} · {item.percent.toFixed(1)}%</span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{formatVND(item.totalNow)} · {item.percent.toFixed(1)}%</span>
                     </div>
                     <div style={{ width: '100%', height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
                       <div style={{ width: `${item.percent}%`, height: '100%', background: 'var(--accent-blue)', borderRadius: '4px' }} />
@@ -264,7 +265,7 @@ export default function PortfolioPage() {
             </div>
           )}
 
-          {/* KHU VỰC THÊM LỆNH */}
+          {/* NÚT GHI LỆNH & NẠP RÚT */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
             <button onClick={() => { setShowTradeForm(!showTradeForm); setShowCashForm(false); }} className="editorial-btn" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Plus size={16} /> Ghi lệnh CP
@@ -274,7 +275,7 @@ export default function PortfolioPage() {
             </button>
           </div>
 
-          {/* Form Ghi lệnh & Tiền mặt (Giữ nguyên như phiên bản trước) */}
+          {/* Form Ghi lệnh & Tiền mặt */}
           {showTradeForm && (
             <div className="bento-card" style={{ marginBottom: '32px', border: '1px solid var(--text-primary)' }}>
               <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '700' }}>Ghi nhận Giao dịch</h3>
@@ -307,7 +308,7 @@ export default function PortfolioPage() {
                      <button type="button" onClick={() => setAdjustmentSign(-1)} className={`editorial-btn`} style={{ flex: 1, background: adjustmentSign === -1 ? 'var(--text-primary)' : 'transparent', color: adjustmentSign === -1 ? 'var(--bg-color)' : 'var(--text-secondary)', border: '1px solid var(--border-color)' }}>Âm (-)</button>
                   </div>
                   <input required type="text" inputMode="numeric" value={adjustmentAmount} onChange={e => setAdjustmentAmount(formatNumberInput(e.target.value))} className="editorial-input" placeholder="Nhập số tiền điều chỉnh" />
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Tiền hệ thống tính toán: <strong>{formatCurrency(cashSummary.calculatedCash)}</strong></div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Tiền hệ thống tính toán: <strong>{formatVND(cashSummary.calculatedCash)}</strong></div>
                   <button type="submit" className="editorial-btn">Lưu số điều chỉnh</button>
                 </form>
               ) : (
@@ -320,10 +321,9 @@ export default function PortfolioPage() {
             </div>
           )}
 
-          {/* DANH SÁCH THẺ CỔ PHIẾU (CARD THIẾT KẾ MỚI) */}
+          {/* DANH SÁCH THẺ CỔ PHIẾU (THIẾT KẾ MỚI GIỐNG ẢNH) */}
           <div style={{ display: 'grid', gap: '16px', marginBottom: '40px' }}>
             {positions.map((pos) => {
-               // Logic tính toán Real-time PnL
                const currentPrice = prices[pos.symbol] || pos.avgBuyPrice;
                const quote = quotes.find(q => q.symbol === pos.symbol);
                const totalNow = currentPrice * pos.quantity;
@@ -333,54 +333,58 @@ export default function PortfolioPage() {
 
                return (
                   <div key={pos.symbol} className="bento-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {/* Header: Tên mã & Nút xóa */}
+                    {/* Header: Mã CK & Nút "Xóa mã" */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                        <div>
-                          <div style={{ fontSize: '32px', fontWeight: '900', fontFamily: "'Playfair Display', serif", lineHeight: 1 }}>{pos.symbol}</div>
-                          <div style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '6px' }}>
-                             {pos.holdings.length} lệnh mua mở · SL {pos.quantity.toLocaleString('en-US')}
+                          <div style={{ fontSize: '32px', fontWeight: '900', lineHeight: 1 }}>{pos.symbol}</div>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '8px' }}>
+                             {pos.holdings.length} lệnh mua mở · SL {pos.quantity.toLocaleString('vi-VN')}
                           </div>
                        </div>
-                       <button onClick={() => deleteStockPosition(pos.symbol)} style={{ background: 'var(--border-color)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }} title="Xóa toàn bộ mã này">
-                          <Trash2 size={16} />
+                       <button onClick={() => deleteStockPosition(pos.symbol)} style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '6px 14px', fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', cursor: 'pointer' }} title="Xóa toàn bộ mã này">
+                          Xóa mã
                        </button>
                     </div>
 
                     {/* Giá hiện tại & Thay đổi */}
-                    <div>
-                       <div style={{ fontSize: '24px', fontWeight: '800' }}>{currentPrice.toLocaleString('vi-VN')}</div>
+                    <div style={{ marginTop: '4px' }}>
+                       <div style={{ fontSize: '28px', fontWeight: '800' }}>{currentPrice.toLocaleString('vi-VN')}</div>
                        <div style={{ fontSize: '14px', fontWeight: '700', color: quote && quote.change >= 0 ? 'var(--accent-green)' : (quote ? 'var(--accent-red)' : 'var(--text-secondary)'), marginTop: '4px' }}>
                           {quote ? `${quote.change > 0 ? '+' : ''}${quote.change.toLocaleString('vi-VN')} · ${quote.pct > 0 ? '+' : ''}${quote.pct.toFixed(2)}%` : '---'}
                        </div>
                     </div>
 
-                    {/* Pills Thông tin */}
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                       <div style={{ background: 'var(--bg-color)', padding: '6px 12px', borderRadius: '16px', fontSize: '13px', fontWeight: '700', border: '1px solid var(--border-color)' }}>SL tổng {pos.quantity.toLocaleString('en-US')}</div>
-                       <div style={{ background: 'var(--bg-color)', padding: '6px 12px', borderRadius: '16px', fontSize: '13px', fontWeight: '700', border: '1px solid var(--border-color)' }}>Giá vốn TB {pos.avgBuyPrice.toLocaleString('vi-VN')} ₫</div>
-                    </div>
-
-                    {/* Tổng mua & Hiện tại */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                       <div style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px' }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Tổng mua</div>
-                          <div style={{ fontSize: '16px', fontWeight: '800', marginTop: '4px' }}>{formatCurrency(pos.totalBuy)}</div>
+                    {/* Pills: Khối lượng & Giá vốn */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                       <div style={{ background: 'var(--bg-color)', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', border: '1px solid var(--border-color)' }}>
+                          SL tổng {pos.quantity.toLocaleString('vi-VN')}
                        </div>
-                       <div style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px' }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Hiện tại</div>
-                          <div style={{ fontSize: '16px', fontWeight: '800', marginTop: '4px' }}>{formatCurrency(totalNow)}</div>
+                       <div style={{ background: 'var(--bg-color)', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '700', border: '1px solid var(--border-color)' }}>
+                          Giá vốn TB {pos.avgBuyPrice.toLocaleString('vi-VN')} đ
                        </div>
                     </div>
 
-                    {/* Lãi Lỗ & Hiệu suất */}
+                    {/* Khối: Tổng mua & Hiện tại */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '4px' }}>
+                       <div style={{ border: '1px solid var(--border-color)', borderRadius: '16px', padding: '16px' }}>
+                          <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Tổng mua</div>
+                          <div style={{ fontSize: '18px', fontWeight: '800', marginTop: '6px' }}>{formatVND(pos.totalBuy)}</div>
+                       </div>
+                       <div style={{ border: '1px solid var(--border-color)', borderRadius: '16px', padding: '16px' }}>
+                          <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Hiện tại</div>
+                          <div style={{ fontSize: '18px', fontWeight: '800', marginTop: '6px' }}>{formatVND(totalNow)}</div>
+                       </div>
+                    </div>
+
+                    {/* Khối: Lãi Lỗ & Hiệu suất (Màu nền xanh/đỏ nhạt) */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                       <div style={{ background: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '12px 16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                          <span style={{ fontWeight: '700', fontSize: '14px' }}>Lãi / Lỗ</span>
-                          <span style={{ fontWeight: '800', fontSize: '15px' }}>{isPositive ? '+' : ''}{formatCurrency(pnl)}</span>
+                       <div style={{ background: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '14px 18px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                          <span style={{ fontWeight: '700', fontSize: '15px' }}>Lãi / Lỗ</span>
+                          <span style={{ fontWeight: '800', fontSize: '16px' }}>{isPositive ? '+' : ''}{formatVND(pnl)}</span>
                        </div>
-                       <div style={{ background: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '12px 16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                          <span style={{ fontWeight: '700', fontSize: '14px' }}>Hiệu suất vị thế</span>
-                          <span style={{ fontWeight: '800', fontSize: '15px' }}>{isPositive ? '+' : ''}{pnlPct.toFixed(2)}%</span>
+                       <div style={{ background: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '14px 18px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', color: isPositive ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                          <span style={{ fontWeight: '700', fontSize: '15px' }}>Hiệu suất vị thế</span>
+                          <span style={{ fontWeight: '800', fontSize: '16px' }}>{isPositive ? '+' : ''}{pnlPct.toFixed(2)}%</span>
                        </div>
                     </div>
                   </div>
@@ -388,11 +392,11 @@ export default function PortfolioPage() {
             })}
           </div>
 
-          {/* NHẬT KÝ GIAO DỊCH (GIỮ NGUYÊN) */}
+          {/* NHẬT KÝ GIAO DỊCH */}
           <div className="bento-card" style={{ padding: '0', overflow: 'hidden' }}>
              <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ListOrdered size={18} color="var(--text-secondary)" />
-                <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Nhật ký giao dịch gần đây</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Nhật ký giao dịch</h3>
              </div>
              <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
@@ -401,7 +405,7 @@ export default function PortfolioPage() {
                          <tr key={tx.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                             <td style={{ padding: '16px 24px' }}><span className={`badge ${tx.transaction_type === 'BUY' ? 'buy' : 'sell'}`}>{tx.transaction_type}</span></td>
                             <td style={{ padding: '16px 24px', fontWeight: '700', fontSize: '16px' }}>{tx.symbol}</td>
-                            <td style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontSize: '14px' }}>{formatDate(tx.trade_date)} <br/> Giá: <strong>{formatCurrency(tx.price)}</strong> x {tx.quantity.toLocaleString('en-US')}</td>
+                            <td style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontSize: '14px' }}>{formatDate(tx.trade_date)} <br/> Giá: <strong>{tx.price.toLocaleString('vi-VN')}</strong> x {tx.quantity.toLocaleString('vi-VN')}</td>
                             <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                                <button onClick={() => deleteTrade(tx.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><Trash2 size={18} /></button>
                             </td>
@@ -410,7 +414,7 @@ export default function PortfolioPage() {
                       {cashTransactions.map((cash) => (
                          <tr key={cash.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                             <td style={{ padding: '16px 24px' }}><span className={`badge ${cash.transaction_type === 'DEPOSIT' ? 'buy' : 'sell'}`}>{cash.transaction_type === 'DEPOSIT' ? 'NẠP TIỀN' : 'RÚT TIỀN'}</span></td>
-                            <td style={{ padding: '16px 24px', fontWeight: '700', fontSize: '16px', color: 'var(--accent-blue)' }}>{formatCurrency(cash.amount)}</td>
+                            <td style={{ padding: '16px 24px', fontWeight: '700', fontSize: '16px', color: 'var(--accent-blue)' }}>{formatVND(cash.amount)}</td>
                             <td style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontSize: '14px' }}>{formatDate(cash.transaction_date)}</td>
                             <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                                <button onClick={() => deleteCash(cash.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><Trash2 size={18} /></button>
