@@ -10,6 +10,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [theme, setTheme] = useState('light');
+  
+  // State mới để lưu tên Sàn giao dịch (Tự động nhận diện)
+  const [tvExchange, setTvExchange] = useState('HOSE');
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -27,13 +30,44 @@ export default function Dashboard() {
   const fetchPerformance = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!symbolInput) return;
-    setLoading(true); setError('');
+    setLoading(true); 
+    setError('');
+    
     try {
-      const res = await fetch(`/api/sieutinhieu/performance?symbol=${symbolInput}`);
-      const json = await res.json();
-      if (json.success && json.data) setPerformanceData(json.data);
-      else setError('Không tìm thấy dữ liệu.');
-    } catch (err) { setError('Lỗi kết nối API.'); } finally { setLoading(false); }
+      const symbol = symbolInput.toUpperCase();
+
+      // 1. Gọi API lấy dữ liệu hiệu suất (của Sieutinhieu)
+      const resPerf = await fetch(`/api/sieutinhieu/performance?symbol=${symbol}`);
+      const jsonPerf = await resPerf.json();
+
+      // 2. [TÍNH NĂNG MỚI] Tự động dò Sàn giao dịch từ API đại chúng của VNDirect
+      try {
+        const resExchange = await fetch(`https://finfo-api.vndirect.com.vn/v4/stocks?q=code:${symbol}`);
+        const jsonExchange = await resExchange.json();
+        
+        if (jsonExchange && jsonExchange.data && jsonExchange.data.length > 0) {
+          const floor = jsonExchange.data[0].floor.toUpperCase();
+          // API VNDirect trả về: HOSE, HNX, UPCOM -> khớp 100% với chuẩn của TradingView
+          setTvExchange(floor);
+        } else {
+          setTvExchange('HOSE'); // Mặc định nếu API VNDirect không tìm thấy
+        }
+      } catch (err) {
+        console.warn('Không dò được sàn, dùng mặc định HOSE', err);
+        setTvExchange('HOSE');
+      }
+
+      // Cập nhật giao diện
+      if (jsonPerf.success && jsonPerf.data) {
+        setPerformanceData(jsonPerf.data);
+      } else {
+        setError('Không tìm thấy dữ liệu.');
+      }
+    } catch (err) { 
+      setError('Lỗi kết nối API.'); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const latestTrade = performanceData?.trades?.[0];
@@ -70,7 +104,7 @@ export default function Dashboard() {
           className="editorial-input"
           value={symbolInput}
           onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
-          placeholder="Nhập mã cổ phiếu (VD: SSI, HPG)..."
+          placeholder="Nhập mã cổ phiếu (VD: SSI, SHS, BSR)..."
         />
         <button type="submit" className="editorial-btn" style={{ position: 'absolute', right: '8px', top: '8px', bottom: '8px' }}>
           Tìm kiếm
@@ -117,15 +151,15 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* KHỐI 2: BIỂU ĐỒ TRADINGVIEW CHUYÊN NGHIỆP */}
+          {/* KHỐI 2: BIỂU ĐỒ TRADINGVIEW TỰ ĐỘNG SÀN */}
           <div className="bento-card" style={{ padding: '0', overflow: 'hidden', height: '550px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-color)' }}>
               <BarChart2 size={20} color="var(--text-secondary)" /> 
-              <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Biểu đồ Kỹ thuật ({performanceData.symbol})</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '700' }}>Biểu đồ Kỹ thuật ({performanceData.symbol} - Sàn: {tvExchange})</h3>
             </div>
             <div style={{ flex: 1, position: 'relative' }}>
               <iframe 
-                src={`https://s.tradingview.com/widgetembed/?symbol=${performanceData.symbol}&interval=D&theme=${theme}&style=1&timezone=Asia%2FHo_Chi_Minh&locale=vi_VN`} 
+                src={`https://s.tradingview.com/widgetembed/?symbol=${tvExchange}:${performanceData.symbol}&interval=D&theme=${theme}&style=1&timezone=Asia%2FHo_Chi_Minh&locale=vi_VN&studies=Volume%40tv-basicstudies`} 
                 style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }}
                 title={`Biểu đồ TradingView ${performanceData.symbol}`}
                 allowFullScreen
