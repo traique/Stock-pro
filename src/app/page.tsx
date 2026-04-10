@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ArrowUpRight, ArrowDownRight, Home as HomeIcon, ListOrdered, Sun, Moon, Bell, Activity } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Activity, Terminal, Zap, Crosshair } from 'lucide-react';
 
 interface Signal {
   symbol: string;
@@ -11,7 +11,6 @@ interface Signal {
   trend_change_detected_at: string;
 }
 
-// Hàm gọi API chống treo
 const fetchWithTimeout = async (url: string, timeout = 5000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -26,35 +25,16 @@ const fetchWithTimeout = async (url: string, timeout = 5000) => {
 };
 
 export default function App() {
-  // --- GLOBAL STATES ---
   const [activeTab, setActiveTab] = useState<'SIGNAL' | 'ANALYTICS'>('SIGNAL');
-  const [theme, setTheme] = useState('light');
 
-  // --- SIGNAL STATES ---
   const [signals, setSignals] = useState<Signal[]>([]);
   const [sigLoading, setSigLoading] = useState(true);
 
-  // --- ANALYTICS STATES ---
   const [symbolInput, setSymbolInput] = useState('SSI');
   const [performanceData, setPerformanceData] = useState<any>(null);
   const [perfLoading, setPerfLoading] = useState(false);
   const [perfError, setPerfError] = useState('');
 
-  // 1. Xử lý Theme Sáng/Tối
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    setTheme(savedTheme);
-    document.documentElement.setAttribute('data-theme', savedTheme);
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
-
-  // 2. Logic Tab Tín Hiệu
   const fetchSignals = async () => {
     try {
       const res = await fetch('/api/sieutinhieu/signals?limit=30&type=BUY', { cache: 'no-store' });
@@ -73,283 +53,303 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Logic Lấy dữ liệu Phân Tích (Được tách riêng để gọi tự động)
   const loadAnalyticsData = async (symbolToFetch: string) => {
     if (!symbolToFetch) return;
-    setPerfLoading(true); 
-    setPerfError('');
-    
+    setPerfLoading(true); setPerfError('');
     try {
       const symbol = symbolToFetch.toUpperCase();
       const resPerf = await fetchWithTimeout(`/api/sieutinhieu/performance?symbol=${symbol}`, 8000);
       const jsonPerf = await resPerf.json();
 
-      if (jsonPerf.success && jsonPerf.data) {
-        setPerformanceData(jsonPerf.data);
-      } else {
-        setPerfError('Không tìm thấy dữ liệu cho mã này.');
-        setPerformanceData(null);
-      }
+      if (jsonPerf.success && jsonPerf.data) setPerformanceData(jsonPerf.data);
+      else { setPerfError('ERR_DATA_NOT_FOUND'); setPerformanceData(null); }
     } catch (err: any) { 
-      if (err.name === 'AbortError') {
-        setPerfError('Máy chủ phản hồi quá lâu. Vui lòng thử lại.');
-      } else {
-        setPerfError('Lỗi kết nối mạng hoặc máy chủ từ chối.');
-      }
+      setPerfError(err.name === 'AbortError' ? 'ERR_TIMEOUT' : 'ERR_CONNECTION_REFUSED');
       setPerformanceData(null);
     } finally { 
       setPerfLoading(false); 
     }
   };
 
-  // Submit từ ô tìm kiếm thủ công
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loadAnalyticsData(symbolInput);
   };
 
-  // 4. Xử lý khi bấm vào 1 mã cổ phiếu ở Tab Tín Hiệu
   const handleSymbolClick = (symbol: string) => {
-    setSymbolInput(symbol);            // Cập nhật ô input thành mã vừa bấm
-    setActiveTab('ANALYTICS');         // Nhảy sang tab Phân tích
-    loadAnalyticsData(symbol);         // Tự động kéo dữ liệu phân tích ngay lập tức
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn mượt lên đầu trang
+    setSymbolInput(symbol);            
+    setActiveTab('ANALYTICS');         
+    loadAnalyticsData(symbol);         
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
 
-  // Helper format ngày tháng
   const formatDate = (ts: number) => {
     if (!ts) return '---';
-    return new Date(ts * 1000).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    const d = new Date(ts * 1000);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)}`;
   };
 
   const latestTrade = performanceData?.trades?.[0];
   const isBuy = latestTrade?.side === 'BUY';
 
   return (
-    <div className="bento-container">
-      {/* --- SHARED HEADER --- */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '40px' }}>
-        <h1 style={{ fontSize: '40px', cursor: 'pointer' }} onClick={() => setActiveTab('SIGNAL')}>
-          Stock Pro
-          <span style={{ color: activeTab === 'SIGNAL' ? 'var(--accent-red)' : 'var(--text-secondary)', fontStyle: 'italic', marginLeft: '8px', transition: 'color 0.3s' }}>
-            {activeTab === 'SIGNAL' ? 'Live.' : 'Analytics.'}
-          </span>
-        </h1>
+    <>
+      {/* --- INJECT CYBERPUNK CSS --- */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&family=Space+Mono:wght@400;700&display=swap');
+
+        :root {
+          --bg-base: #050505;
+          --panel-bg: rgba(10, 10, 12, 0.7);
+          --neon-cyan: #00f0ff;
+          --neon-green: #00ff66;
+          --neon-red: #ff0055;
+          --text-main: #ffffff;
+          --text-muted: #5c677d;
+          --border-glow: rgba(0, 240, 255, 0.3);
+          --border-line: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+          background-color: var(--bg-base) !important;
+          color: var(--text-main) !important;
+          font-family: 'Space Grotesk', sans-serif !important;
+          background-image: 
+            linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px) !important;
+          background-size: 40px 40px !important;
+          background-position: center center !important;
+        }
+
+        .cyber-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+
+        .cyber-card {
+          background: var(--panel-bg);
+          border: 1px solid var(--border-line);
+          border-radius: 4px;
+          padding: 24px;
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          position: relative;
+          transition: all 0.3s ease;
+        }
+
+        .cyber-card::before {
+          content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+          background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+          opacity: 0; transition: opacity 0.3s ease;
+        }
+
+        .cyber-card:hover { border-color: var(--border-glow); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8); }
+        .cyber-card:hover::before { opacity: 0.5; }
+
+        .font-mono { font-family: 'Space Mono', monospace !important; }
+        .neon-text-cyan { color: var(--neon-cyan); text-shadow: 0 0 10px rgba(0, 240, 255, 0.5); }
+        .neon-text-green { color: var(--neon-green); text-shadow: 0 0 10px rgba(0, 255, 102, 0.4); }
+        .neon-text-red { color: var(--neon-red); text-shadow: 0 0 10px rgba(255, 0, 85, 0.4); }
+
+        .cyber-input {
+          background: rgba(0,0,0,0.6); border: 1px solid var(--border-line);
+          color: var(--neon-cyan); padding: 14px 24px; border-radius: 0px;
+          font-family: 'Space Mono', monospace; font-size: 16px; width: 100%;
+          outline: none; transition: all 0.3s;
+        }
+        .cyber-input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0, 240, 255, 0.1) inset; }
+
+        .cyber-btn {
+          background: transparent; color: var(--neon-cyan); border: 1px solid var(--neon-cyan);
+          padding: 12px 28px; border-radius: 0px; font-family: 'Space Grotesk', sans-serif;
+          font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+          cursor: pointer; transition: all 0.2s; text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+        }
+        .cyber-btn:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); }
+
+        .cyber-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; }
+        .cyber-table th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; padding: 0 16px 12px; border-bottom: 1px solid var(--border-line); font-family: 'Space Mono', monospace; }
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* MENU ĐIỀU HƯỚNG MỚI (Segmented Control) */}
-          <div style={{ 
-            display: 'flex', 
-            background: 'var(--border-color)', 
-            padding: '6px', 
-            borderRadius: '16px',
-            gap: '4px'
-          }}>
-            <button 
-              onClick={() => setActiveTab('SIGNAL')} 
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                background: activeTab === 'SIGNAL' ? 'var(--text-primary)' : 'transparent',
-                color: activeTab === 'SIGNAL' ? 'var(--bg-color)' : 'var(--text-secondary)',
-                fontWeight: activeTab === 'SIGNAL' ? '700' : '500',
-                fontSize: '14px',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            >
-              <Activity size={18} /> Tín hiệu
+        .row-item { background: rgba(255, 255, 255, 0.01); transition: all 0.2s; cursor: pointer; }
+        .row-item:hover { background: rgba(0, 240, 255, 0.05); border-left: 2px solid var(--neon-cyan); }
+        .row-item td { padding: 16px; border-top: 1px solid transparent; border-bottom: 1px solid var(--border-line); }
+
+        .badge-buy { border: 1px solid var(--neon-green); color: var(--neon-green); padding: 4px 8px; font-size: 11px; font-family: 'Space Mono', monospace; background: rgba(0, 255, 102, 0.05); box-shadow: 0 0 8px rgba(0, 255, 102, 0.2); }
+        .badge-sell { border: 1px solid var(--neon-red); color: var(--neon-red); padding: 4px 8px; font-size: 11px; font-family: 'Space Mono', monospace; background: rgba(255, 0, 85, 0.05); box-shadow: 0 0 8px rgba(255, 0, 85, 0.2); }
+      `}} />
+
+      <div className="cyber-container">
+        {/* --- HEADER --- */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '60px' }}>
+          <h1 style={{ fontSize: '36px', fontWeight: '900', letterSpacing: '-1px', margin: 0, cursor: 'pointer' }} onClick={() => setActiveTab('SIGNAL')}>
+            STOCK<span className="neon-text-cyan" style={{ marginLeft: '2px' }}>PRO_</span>
+            <span className="font-mono" style={{ fontSize: '14px', color: 'var(--text-muted)', letterSpacing: '2px', verticalAlign: 'top', marginLeft: '12px' }}>
+              {activeTab === 'SIGNAL' ? '[LIVE_FEED]' : '[SCANNER]'}
+            </span>
+          </h1>
+          
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <button onClick={() => setActiveTab('SIGNAL')} className="cyber-btn" style={{ background: activeTab === 'SIGNAL' ? 'var(--neon-cyan)' : 'transparent', color: activeTab === 'SIGNAL' ? '#000' : 'var(--neon-cyan)', boxShadow: activeTab === 'SIGNAL' ? '0 0 20px rgba(0, 240, 255, 0.4)' : 'none', padding: '10px 20px' }}>
+              <Activity size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: '-3px' }}/> SYSTEM.LIVE
             </button>
-            <button 
-              onClick={() => setActiveTab('ANALYTICS')} 
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                background: activeTab === 'ANALYTICS' ? 'var(--text-primary)' : 'transparent',
-                color: activeTab === 'ANALYTICS' ? 'var(--bg-color)' : 'var(--text-secondary)',
-                fontWeight: activeTab === 'ANALYTICS' ? '700' : '500',
-                fontSize: '14px',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            >
-              <Search size={18} /> Phân tích
+            <button onClick={() => setActiveTab('ANALYTICS')} className="cyber-btn" style={{ background: activeTab === 'ANALYTICS' ? 'var(--neon-cyan)' : 'transparent', color: activeTab === 'ANALYTICS' ? '#000' : 'var(--neon-cyan)', boxShadow: activeTab === 'ANALYTICS' ? '0 0 20px rgba(0, 240, 255, 0.4)' : 'none', padding: '10px 20px' }}>
+              <Crosshair size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: '-3px' }}/> DATA.SCAN
             </button>
           </div>
-
-          <button onClick={toggleTheme} className="theme-toggle" aria-label="Toggle Theme" style={{ padding: '12px', borderRadius: '16px', background: 'var(--border-color)' }}>
-            {theme === 'light' ? <Moon size={20} color="var(--text-primary)" /> : <Sun size={20} color="var(--text-primary)" />}
-          </button>
         </div>
-      </div>
 
-      {/* ========================================= */}
-      {/* TAB TÍN HIỆU                */}
-      {/* ========================================= */}
-      <div style={{ display: activeTab === 'SIGNAL' ? 'block' : 'none', animation: 'fadeIn 0.3s ease-in-out' }}>
-        <div className="bento-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '22px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Bell size={20} color="var(--text-secondary)" /> Tín hiệu Mua mạnh hôm nay
-            </h2>
-            <button className="editorial-btn" onClick={fetchSignals}>Làm mới</button>
-          </div>
-
-          {sigLoading ? (
-            <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px' }}>Đang tải dữ liệu tín hiệu...</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    <th style={{ padding: '16px 8px' }}>Mã CP (Bấm để PT)</th>
-                    <th style={{ padding: '16px 8px' }}>Giá vào</th>
-                    <th style={{ padding: '16px 8px' }}>Tín hiệu</th>
-                    <th style={{ padding: '16px 8px', textAlign: 'right' }}>Thanh khoản</th>
-                    <th style={{ padding: '16px 8px', textAlign: 'right' }}>Thời gian</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {signals.map((s, i) => (
-                    <tr 
-                      key={i} 
-                      onClick={() => handleSymbolClick(s.symbol)}
-                      title={`Phân tích hiệu suất mã ${s.symbol}`}
-                      style={{ 
-                        borderBottom: '1px solid var(--border-color)', 
-                        cursor: 'pointer',
-                        transition: 'background 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,122,255,0.05)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <td style={{ padding: '24px 8px', fontSize: '18px', fontWeight: '700', fontFamily: "'Playfair Display', serif" }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-blue)' }}>
-                          {s.symbol} <ArrowUpRight size={16} style={{ opacity: 0.6 }} />
-                        </div>
-                      </td>
-                      <td style={{ padding: '24px 8px', fontSize: '16px', fontWeight: '500' }}>
-                        {s.price?.toLocaleString('vi-VN')} đ
-                      </td>
-                      <td style={{ padding: '24px 8px' }}>
-                        <span className="badge buy">{s.signal_type}</span>
-                      </td>
-                      <td style={{ padding: '24px 8px', textAlign: 'right', fontSize: '15px' }}>
-                        {(s.trading_value / 1_000_000_000).toFixed(1)} tỷ
-                      </td>
-                      <td style={{ padding: '24px 8px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '14px' }}>
-                        {s.trend_change_detected_at ? new Date(s.trend_change_detected_at).toLocaleTimeString('vi-VN') : '---'}
-                      </td>
-                    </tr>
-                  ))}
-                  {signals.length === 0 && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                        Hôm nay chưa có tín hiệu mua mới.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ========================================= */}
-      {/* TAB PHÂN TÍCH               */}
-      {/* ========================================= */}
-      <div style={{ display: activeTab === 'ANALYTICS' ? 'block' : 'none', animation: 'fadeIn 0.3s ease-in-out' }}>
-        <form onSubmit={handleFormSubmit} style={{ position: 'relative', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>
-          <Search style={{ position: 'absolute', left: '18px', top: '16px', color: 'var(--text-secondary)' }} size={22} />
-          <input 
-            type="text" 
-            className="editorial-input"
-            value={symbolInput}
-            onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
-            placeholder="Nhập mã cổ phiếu (VD: SSI, SHS, BSR)..."
-            style={{ borderRadius: '24px', paddingLeft: '50px' }}
-          />
-          <button type="submit" className="editorial-btn" style={{ position: 'absolute', right: '8px', top: '8px', bottom: '8px', borderRadius: '16px' }}>
-            Tìm kiếm
-          </button>
-        </form>
-
-        {perfLoading && <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Đang thu thập dữ liệu...</p>}
-        {perfError && <p style={{ textAlign: 'center', color: 'var(--accent-red)' }}>{perfError}</p>}
-
-        {performanceData && !perfLoading && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            {/* KHỐI 1: CHỈ SỐ THỐNG KÊ */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-              <div className="bento-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <h3 style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '20px' }}>Trạng thái hiện tại</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{ padding: '16px', borderRadius: '50%', border: `1px solid ${isBuy ? 'var(--accent-green)' : 'var(--accent-red)'}` }}>
-                    {isBuy ? <ArrowUpRight size={32} color="var(--accent-green)" /> : <ArrowDownRight size={32} color="var(--accent-red)" />}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '36px', fontFamily: "'Playfair Display', serif", color: isBuy ? 'var(--accent-green)' : 'var(--accent-red)', lineHeight: '1' }}>
-                      {isBuy ? 'BUY' : 'SELL'}
-                    </div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-                      Vùng giá: <strong style={{ color: 'var(--text-primary)' }}>{latestTrade?.entry_price}</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                <div className="bento-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-                  <div style={{ fontSize: '40px', fontFamily: "'Playfair Display', serif" }}>{performanceData.win_rate?.toFixed(0)}<span style={{ fontSize: '20px', color: 'var(--text-secondary)' }}>%</span></div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '8px' }}>Tỷ lệ thắng</div>
-                </div>
-                <div className="bento-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-                  <div style={{ fontSize: '40px', fontFamily: "'Playfair Display', serif", color: performanceData.total_pnl_pct > 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                    {performanceData.total_pnl_pct > 0 ? '+' : ''}{performanceData.total_pnl_pct?.toFixed(0)}<span style={{ fontSize: '20px' }}>%</span>
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '8px' }}>Lợi nhuận</div>
-                </div>
-              </div>
+        {/* --- TAB: SIGNAL --- */}
+        <div style={{ display: activeTab === 'SIGNAL' ? 'block' : 'none', animation: 'fadeIn 0.3s ease-in-out' }}>
+          <div className="cyber-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                <Zap size={20} className="neon-text-cyan" /> SIGNAL_STREAM
+              </h2>
+              <button className="cyber-btn" onClick={fetchSignals} style={{ fontSize: '12px', padding: '6px 16px' }}>REBOOT</button>
             </div>
 
-            {/* KHỐI 2: LỊCH SỬ LỆNH */}
-            <div className="bento-card" style={{ padding: '0', overflow: 'hidden' }}>
-              <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-color)' }}>
-                <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}><ListOrdered size={20} color="var(--text-secondary)" /> Lịch sử lệnh ({performanceData.symbol})</h3>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{performanceData.trades?.length || 0} lệnh</span>
-              </div>
+            {sigLoading ? (
+              <p className="font-mono neon-text-cyan" style={{ textAlign: 'center', padding: '40px' }}>&gt; Fetching live data...</p>
+            ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
+                <table className="cyber-table">
                   <thead>
-                    <tr style={{ color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Loại</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Ngày vào</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Giá vào</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Ngày ra</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>Giá ra</th>
-                      <th style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', textAlign: 'right' }}>Kết quả</th>
+                    <tr>
+                      <th style={{ textAlign: 'left' }}>TARGET (CLICK)</th>
+                      <th style={{ textAlign: 'left' }}>ENTRY_PRICE</th>
+                      <th style={{ textAlign: 'left' }}>ACTION</th>
+                      <th style={{ textAlign: 'right' }}>VOLUME (VND)</th>
+                      <th style={{ textAlign: 'right' }}>TIMESTAMP</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {performanceData.trades?.map((trade: any, idx: number) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                        <td style={{ padding: '20px 24px' }}><span className={`badge ${trade.side === 'BUY' ? 'buy' : 'sell'}`}>{trade.side}</span></td>
-                        <td style={{ padding: '20px 24px', color: 'var(--text-secondary)' }}>{formatDate(trade.entry_ts)}</td>
-                        <td style={{ padding: '20px 24px', fontWeight: '600' }}>{trade.entry_price}</td>
-                        <td style={{ padding: '20px 24px', color: 'var(--text-secondary)' }}>{formatDate(trade.exit_ts)}</td>
-                        <td style={{ padding: '20px 24px', fontWeight: '600' }}>{trade.exit_price || '---'}</td>
-                        <td style={{ padding: '20px 24px', textAlign: 'right', fontWeight: '700', color: trade.pnl_pct > 0 ? 'var(--accent-green)' : trade.pnl_pct < 0 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>
-                          {trade.pnl_pct > 0 ? '+' : ''}{trade.pnl_pct}%
+                    {signals.map((s, i) => (
+                      <tr key={i} className="row-item" onClick={() => handleSymbolClick(s.symbol)}>
+                        <td style={{ fontSize: '20px', fontWeight: '700' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {s.symbol} <ArrowUpRight size={16} className="neon-text-cyan" />
+                          </div>
+                        </td>
+                        <td className="font-mono" style={{ fontSize: '16px' }}>
+                          {s.price?.toLocaleString('vi-VN')}
+                        </td>
+                        <td>
+                          <span className="badge-buy">{s.signal_type}</span>
+                        </td>
+                        <td className="font-mono" style={{ textAlign: 'right', fontSize: '15px' }}>
+                          {(s.trading_value / 1_000_000_000).toFixed(1)}B
+                        </td>
+                        <td className="font-mono" style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '14px' }}>
+                          {s.trend_change_detected_at ? new Date(s.trend_change_detected_at).toLocaleTimeString('vi-VN') : '---'}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
 
-    </div>
+        {/* --- TAB: ANALYTICS --- */}
+        <div style={{ display: activeTab === 'ANALYTICS' ? 'block' : 'none', animation: 'fadeIn 0.3s ease-in-out' }}>
+          
+          <form onSubmit={handleFormSubmit} style={{ display: 'flex', gap: '16px', marginBottom: '40px' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Terminal style={{ position: 'absolute', left: '20px', top: '15px', color: 'var(--neon-cyan)' }} size={20} />
+              <input 
+                type="text" 
+                className="cyber-input"
+                value={symbolInput}
+                onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
+                placeholder="INPUT_TICKER // e.g. SSI"
+                style={{ paddingLeft: '56px' }}
+              />
+            </div>
+            <button type="submit" className="cyber-btn" style={{ padding: '0 40px' }}>
+              EXECUTE
+            </button>
+          </form>
+
+          {perfLoading && <p className="font-mono neon-text-cyan" style={{ textAlign: 'center' }}>&gt; Analyzing data packets...</p>}
+          {perfError && <p className="font-mono neon-text-red" style={{ textAlign: 'center' }}>&gt; ERROR: {perfError}</p>}
+
+          {performanceData && !perfLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              
+              {/* KHỐI 1: THỐNG KÊ (HACKER STYLE) */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+                <div className="cyber-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <h3 className="font-mono" style={{ fontSize: '12px', color: 'var(--text-muted)', letterSpacing: '2px', marginBottom: '20px' }}>&gt; CURRENT_STATUS</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                    <div style={{ padding: '16px', border: `1px solid ${isBuy ? 'var(--neon-green)' : 'var(--neon-red)'}`, boxShadow: `0 0 15px ${isBuy ? 'rgba(0,255,102,0.2)' : 'rgba(255,0,85,0.2)'} inset` }}>
+                      {isBuy ? <ArrowUpRight size={36} className="neon-text-green" /> : <ArrowDownRight size={36} className="neon-text-red" />}
+                    </div>
+                    <div>
+                      <div className={isBuy ? 'neon-text-green' : 'neon-text-red'} style={{ fontSize: '42px', fontWeight: '900', lineHeight: '1', letterSpacing: '2px' }}>
+                        {isBuy ? 'LONG' : 'SHORT'}
+                      </div>
+                      <div className="font-mono" style={{ fontSize: '15px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                        ENTRY_ZONE: <strong style={{ color: '#fff' }}>{latestTrade?.entry_price}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                  <div className="cyber-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                    <div className="font-mono" style={{ fontSize: '48px', fontWeight: '700', color: '#fff' }}>
+                      {performanceData.win_rate?.toFixed(0)}<span style={{ fontSize: '20px', color: 'var(--text-muted)' }}>%</span>
+                    </div>
+                    <div className="font-mono" style={{ fontSize: '11px', color: 'var(--neon-cyan)', letterSpacing: '2px', marginTop: '8px' }}>WIN_RATE</div>
+                  </div>
+                  <div className="cyber-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                    <div className={`font-mono ${performanceData.total_pnl_pct > 0 ? 'neon-text-green' : 'neon-text-red'}`} style={{ fontSize: '48px', fontWeight: '700' }}>
+                      {performanceData.total_pnl_pct > 0 ? '+' : ''}{performanceData.total_pnl_pct?.toFixed(0)}<span style={{ fontSize: '20px', color: 'var(--text-muted)' }}>%</span>
+                    </div>
+                    <div className="font-mono" style={{ fontSize: '11px', color: 'var(--neon-cyan)', letterSpacing: '2px', marginTop: '8px' }}>NET_PROFIT</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* KHỐI 2: LỊCH SỬ LỆNH */}
+              <div className="cyber-card" style={{ padding: '0', overflow: 'hidden' }}>
+                <div style={{ padding: '24px', borderBottom: '1px solid var(--border-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)' }}>
+                  <h3 className="font-mono" style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '1px' }}>
+                    <ListOrdered size={18} className="neon-text-cyan" /> TRADE_LOGS ({performanceData.symbol})
+                  </h3>
+                  <span className="font-mono" style={{ color: 'var(--neon-cyan)', fontSize: '12px' }}>COUNT: {performanceData.trades?.length || 0}</span>
+                </div>
+                <div style={{ overflowX: 'auto', padding: '12px 24px 24px' }}>
+                  <table className="cyber-table">
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left' }}>TYPE</th>
+                        <th style={{ textAlign: 'left' }}>ENTRY_DATE</th>
+                        <th style={{ textAlign: 'left' }}>IN_PRICE</th>
+                        <th style={{ textAlign: 'left' }}>EXIT_DATE</th>
+                        <th style={{ textAlign: 'left' }}>OUT_PRICE</th>
+                        <th style={{ textAlign: 'right' }}>PNL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {performanceData.trades?.map((trade: any, idx: number) => (
+                        <tr key={idx} className="row-item">
+                          <td><span className={`badge-${trade.side === 'BUY' ? 'buy' : 'sell'}`}>{trade.side}</span></td>
+                          <td className="font-mono" style={{ color: 'var(--text-muted)' }}>{formatDate(trade.entry_ts)}</td>
+                          <td className="font-mono" style={{ fontWeight: '700' }}>{trade.entry_price}</td>
+                          <td className="font-mono" style={{ color: 'var(--text-muted)' }}>{formatDate(trade.exit_ts)}</td>
+                          <td className="font-mono" style={{ fontWeight: '700' }}>{trade.exit_price || '---'}</td>
+                          <td className="font-mono" style={{ textAlign: 'right', fontWeight: '700', color: trade.pnl_pct > 0 ? 'var(--neon-green)' : trade.pnl_pct < 0 ? 'var(--neon-red)' : 'var(--text-muted)' }}>
+                            {trade.pnl_pct > 0 ? '+' : ''}{trade.pnl_pct}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
