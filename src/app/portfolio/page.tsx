@@ -131,7 +131,8 @@ export default function PortfolioPage() {
       const currentPrice = prices[pos.symbol] || pos.avgBuyPrice;
       const posTotalNow = currentPrice * pos.quantity;
       const percent = totalNow > 0 ? (posTotalNow / totalNow) * 100 : 0;
-      return { symbol: pos.symbol, totalBuy: posTotalNow, percent };
+      // ĐÃ SỬA LỖI TẠI ĐÂY: đổi totalBuy thành totalNow
+      return { symbol: pos.symbol, totalNow: posTotalNow, percent };
     }).sort((a, b) => b.totalNow - a.totalNow);
   }, [positions, prices, marketValue]);
 
