@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowUpRight, ArrowDownRight, Activity, Terminal, Zap, Crosshair } from 'lucide-react';
+// Đã bổ sung ListOrdered vào đây!
+import { ArrowUpRight, ArrowDownRight, Activity, Terminal, Zap, Crosshair, ListOrdered } from 'lucide-react';
 
 interface Signal {
   symbol: string;
