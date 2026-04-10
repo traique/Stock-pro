@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// Đã bổ sung ListOrdered vào đây!
 import { ArrowUpRight, ArrowDownRight, Activity, Terminal, Zap, Crosshair, ListOrdered } from 'lucide-react';
 
 interface Signal {
@@ -95,20 +94,20 @@ export default function App() {
 
   return (
     <>
-      {/* --- INJECT CYBERPUNK CSS --- */}
+      {/* --- INJECT CYBERPUNK CSS (ĐÃ TĂNG SÁNG) --- */}
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&family=Space+Mono:wght@400;700&display=swap');
 
         :root {
           --bg-base: #050505;
-          --panel-bg: rgba(10, 10, 12, 0.7);
+          --panel-bg: rgba(10, 10, 12, 0.85);
           --neon-cyan: #00f0ff;
           --neon-green: #00ff66;
           --neon-red: #ff0055;
           --text-main: #ffffff;
-          --text-muted: #5c677d;
-          --border-glow: rgba(0, 240, 255, 0.3);
-          --border-line: rgba(255, 255, 255, 0.08);
+          --text-muted: #a3b8cc; /* Đã kéo sáng rõ rệt */
+          --border-glow: rgba(0, 240, 255, 0.4);
+          --border-line: rgba(255, 255, 255, 0.15); /* Viền sáng hơn */
         }
 
         body {
@@ -116,8 +115,8 @@ export default function App() {
           color: var(--text-main) !important;
           font-family: 'Space Grotesk', sans-serif !important;
           background-image: 
-            linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px) !important;
+            linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px) !important;
           background-size: 40px 40px !important;
           background-position: center center !important;
         }
@@ -142,7 +141,7 @@ export default function App() {
         }
 
         .cyber-card:hover { border-color: var(--border-glow); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8); }
-        .cyber-card:hover::before { opacity: 0.5; }
+        .cyber-card:hover::before { opacity: 0.8; }
 
         .font-mono { font-family: 'Space Mono', monospace !important; }
         .neon-text-cyan { color: var(--neon-cyan); text-shadow: 0 0 10px rgba(0, 240, 255, 0.5); }
@@ -150,12 +149,12 @@ export default function App() {
         .neon-text-red { color: var(--neon-red); text-shadow: 0 0 10px rgba(255, 0, 85, 0.4); }
 
         .cyber-input {
-          background: rgba(0,0,0,0.6); border: 1px solid var(--border-line);
+          background: rgba(0,0,0,0.8); border: 1px solid var(--border-line);
           color: var(--neon-cyan); padding: 14px 24px; border-radius: 0px;
           font-family: 'Space Mono', monospace; font-size: 16px; width: 100%;
           outline: none; transition: all 0.3s;
         }
-        .cyber-input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0, 240, 255, 0.1) inset; }
+        .cyber-input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0, 240, 255, 0.2) inset; }
 
         .cyber-btn {
           background: transparent; color: var(--neon-cyan); border: 1px solid var(--neon-cyan);
@@ -163,34 +162,34 @@ export default function App() {
           font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
           cursor: pointer; transition: all 0.2s; text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
         }
-        .cyber-btn:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); }
+        .cyber-btn:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 20px rgba(0, 240, 255, 0.6); }
 
         .cyber-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; }
-        .cyber-table th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; padding: 0 16px 12px; border-bottom: 1px solid var(--border-line); font-family: 'Space Mono', monospace; }
+        .cyber-table th { color: var(--neon-cyan); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; padding: 0 16px 12px; border-bottom: 1px solid var(--border-line); font-family: 'Space Mono', monospace; opacity: 0.9; }
         
-        .row-item { background: rgba(255, 255, 255, 0.01); transition: all 0.2s; cursor: pointer; }
-        .row-item:hover { background: rgba(0, 240, 255, 0.05); border-left: 2px solid var(--neon-cyan); }
-        .row-item td { padding: 16px; border-top: 1px solid transparent; border-bottom: 1px solid var(--border-line); }
+        .row-item { background: rgba(255, 255, 255, 0.02); transition: all 0.2s; cursor: pointer; }
+        .row-item:hover { background: rgba(0, 240, 255, 0.08); border-left: 2px solid var(--neon-cyan); }
+        .row-item td { padding: 16px; border-top: 1px solid transparent; border-bottom: 1px solid var(--border-line); color: #ffffff; }
 
-        .badge-buy { border: 1px solid var(--neon-green); color: var(--neon-green); padding: 4px 8px; font-size: 11px; font-family: 'Space Mono', monospace; background: rgba(0, 255, 102, 0.05); box-shadow: 0 0 8px rgba(0, 255, 102, 0.2); }
-        .badge-sell { border: 1px solid var(--neon-red); color: var(--neon-red); padding: 4px 8px; font-size: 11px; font-family: 'Space Mono', monospace; background: rgba(255, 0, 85, 0.05); box-shadow: 0 0 8px rgba(255, 0, 85, 0.2); }
+        .badge-buy { border: 1px solid var(--neon-green); color: var(--neon-green); padding: 6px 10px; font-size: 12px; font-family: 'Space Mono', monospace; background: rgba(0, 255, 102, 0.1); box-shadow: 0 0 8px rgba(0, 255, 102, 0.3); font-weight: bold; }
+        .badge-sell { border: 1px solid var(--neon-red); color: var(--neon-red); padding: 6px 10px; font-size: 12px; font-family: 'Space Mono', monospace; background: rgba(255, 0, 85, 0.1); box-shadow: 0 0 8px rgba(255, 0, 85, 0.3); font-weight: bold; }
       `}} />
 
       <div className="cyber-container">
         {/* --- HEADER --- */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '60px' }}>
-          <h1 style={{ fontSize: '36px', fontWeight: '900', letterSpacing: '-1px', margin: 0, cursor: 'pointer' }} onClick={() => setActiveTab('SIGNAL')}>
+          <h1 style={{ fontSize: '36px', fontWeight: '900', letterSpacing: '-1px', margin: 0, cursor: 'pointer', color: '#ffffff' }} onClick={() => setActiveTab('SIGNAL')}>
             STOCK<span className="neon-text-cyan" style={{ marginLeft: '2px' }}>PRO_</span>
             <span className="font-mono" style={{ fontSize: '14px', color: 'var(--text-muted)', letterSpacing: '2px', verticalAlign: 'top', marginLeft: '12px' }}>
               {activeTab === 'SIGNAL' ? '[LIVE_FEED]' : '[SCANNER]'}
             </span>
           </h1>
           
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <button onClick={() => setActiveTab('SIGNAL')} className="cyber-btn" style={{ background: activeTab === 'SIGNAL' ? 'var(--neon-cyan)' : 'transparent', color: activeTab === 'SIGNAL' ? '#000' : 'var(--neon-cyan)', boxShadow: activeTab === 'SIGNAL' ? '0 0 20px rgba(0, 240, 255, 0.4)' : 'none', padding: '10px 20px' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            <button onClick={() => setActiveTab('SIGNAL')} className="cyber-btn" style={{ background: activeTab === 'SIGNAL' ? 'var(--neon-cyan)' : 'transparent', color: activeTab === 'SIGNAL' ? '#000' : 'var(--neon-cyan)', boxShadow: activeTab === 'SIGNAL' ? '0 0 20px rgba(0, 240, 255, 0.4)' : 'none', padding: '10px 20px', flex: 1 }}>
               <Activity size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: '-3px' }}/> SYSTEM.LIVE
             </button>
-            <button onClick={() => setActiveTab('ANALYTICS')} className="cyber-btn" style={{ background: activeTab === 'ANALYTICS' ? 'var(--neon-cyan)' : 'transparent', color: activeTab === 'ANALYTICS' ? '#000' : 'var(--neon-cyan)', boxShadow: activeTab === 'ANALYTICS' ? '0 0 20px rgba(0, 240, 255, 0.4)' : 'none', padding: '10px 20px' }}>
+            <button onClick={() => setActiveTab('ANALYTICS')} className="cyber-btn" style={{ background: activeTab === 'ANALYTICS' ? 'var(--neon-cyan)' : 'transparent', color: activeTab === 'ANALYTICS' ? '#000' : 'var(--neon-cyan)', boxShadow: activeTab === 'ANALYTICS' ? '0 0 20px rgba(0, 240, 255, 0.4)' : 'none', padding: '10px 20px', flex: 1 }}>
               <Crosshair size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: '-3px' }}/> DATA.SCAN
             </button>
           </div>
@@ -200,7 +199,7 @@ export default function App() {
         <div style={{ display: activeTab === 'SIGNAL' ? 'block' : 'none', animation: 'fadeIn 0.3s ease-in-out' }}>
           <div className="cyber-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px', textTransform: 'uppercase', letterSpacing: '2px' }}>
+              <h2 style={{ fontSize: '18px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '10px', textTransform: 'uppercase', letterSpacing: '2px' }}>
                 <Zap size={20} className="neon-text-cyan" /> SIGNAL_STREAM
               </h2>
               <button className="cyber-btn" onClick={fetchSignals} style={{ fontSize: '12px', padding: '6px 16px' }}>REBOOT</button>
@@ -252,8 +251,8 @@ export default function App() {
         {/* --- TAB: ANALYTICS --- */}
         <div style={{ display: activeTab === 'ANALYTICS' ? 'block' : 'none', animation: 'fadeIn 0.3s ease-in-out' }}>
           
-          <form onSubmit={handleFormSubmit} style={{ display: 'flex', gap: '16px', marginBottom: '40px' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
+          <form onSubmit={handleFormSubmit} style={{ display: 'flex', gap: '16px', marginBottom: '40px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: '1 1 300px' }}>
               <Terminal style={{ position: 'absolute', left: '20px', top: '15px', color: 'var(--neon-cyan)' }} size={20} />
               <input 
                 type="text" 
@@ -264,7 +263,7 @@ export default function App() {
                 style={{ paddingLeft: '56px' }}
               />
             </div>
-            <button type="submit" className="cyber-btn" style={{ padding: '0 40px' }}>
+            <button type="submit" className="cyber-btn" style={{ padding: '0 40px', flex: '1 1 100px' }}>
               EXECUTE
             </button>
           </form>
@@ -312,8 +311,8 @@ export default function App() {
 
               {/* KHỐI 2: LỊCH SỬ LỆNH */}
               <div className="cyber-card" style={{ padding: '0', overflow: 'hidden' }}>
-                <div style={{ padding: '24px', borderBottom: '1px solid var(--border-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)' }}>
-                  <h3 className="font-mono" style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '1px' }}>
+                <div style={{ padding: '24px', borderBottom: '1px solid var(--border-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.4)' }}>
+                  <h3 className="font-mono" style={{ fontSize: '14px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '1px' }}>
                     <ListOrdered size={18} className="neon-text-cyan" /> TRADE_LOGS ({performanceData.symbol})
                   </h3>
                   <span className="font-mono" style={{ color: 'var(--neon-cyan)', fontSize: '12px' }}>COUNT: {performanceData.trades?.length || 0}</span>
@@ -335,9 +334,9 @@ export default function App() {
                         <tr key={idx} className="row-item">
                           <td><span className={`badge-${trade.side === 'BUY' ? 'buy' : 'sell'}`}>{trade.side}</span></td>
                           <td className="font-mono" style={{ color: 'var(--text-muted)' }}>{formatDate(trade.entry_ts)}</td>
-                          <td className="font-mono" style={{ fontWeight: '700' }}>{trade.entry_price}</td>
+                          <td className="font-mono" style={{ fontWeight: '700', color: '#fff' }}>{trade.entry_price}</td>
                           <td className="font-mono" style={{ color: 'var(--text-muted)' }}>{formatDate(trade.exit_ts)}</td>
-                          <td className="font-mono" style={{ fontWeight: '700' }}>{trade.exit_price || '---'}</td>
+                          <td className="font-mono" style={{ fontWeight: '700', color: '#fff' }}>{trade.exit_price || '---'}</td>
                           <td className="font-mono" style={{ textAlign: 'right', fontWeight: '700', color: trade.pnl_pct > 0 ? 'var(--neon-green)' : trade.pnl_pct < 0 ? 'var(--neon-red)' : 'var(--text-muted)' }}>
                             {trade.pnl_pct > 0 ? '+' : ''}{trade.pnl_pct}%
                           </td>
